@@ -1,0 +1,21 @@
+XCLK_GPIO_NUM 15
+SIOD_GPIO_NUM 4
+SIOC_GPIO_NUM 5
+
+Y2_GPIO_NUM 11
+Y3_GPIO_NUM 9
+Y4_GPIO_NUM 8
+Y5_GPIO_NUM 10
+Y6_GPIO_NUM 12
+Y7_GPIO_NUM 18
+Y8_GPIO_NUM 17
+Y9_GPIO_NUM 16
+
+VSYNC_GPIO_NUM 6
+HREF_GPIO_NUM 7
+PCLK_GPIO_NUM 13
+
+Refer to image to know which pins are used by WS2812 and Camera
+
+Packages to download (if using Arduino IDE)
+Freenove WS2812 Lib for ESP32 (1.0.1)
