@@ -2,13 +2,13 @@ LCD 128 * 160 (1.8inch)
 Connection via SPI
 Power at 3.3V
 
-GND: Ground
-VCC: 3.3-5V DC
-SCL: SPI Clock
-SDA: SPI Data
-RES: Reset
-DC: SPI Data / Select
-CS, BLK: Default floating (not connected), active LOW to shut down
+GND: Ground \
+VCC: 3.3-5V DC \
+SCL: SPI Clock \
+SDA: SPI Data \
+RES: Reset \
+DC: SPI Data / Select \
+CS, BLK: Default floating (not connected), active LOW to shut down \
 
 1.8TFT-LCD Arduino program usage instructions. This module is equipped with
 The set of Arduino code is shown below
