@@ -21,12 +21,12 @@ bool ledState = false;
 
 // LED blinking function
 void blinkLED(int interval) {
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    ledState = !ledState;
-    digitalWrite(LED_PIN, ledState);
-  }
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis;
+        ledState = !ledState;
+        digitalWrite(LED_PIN, ledState);
+    }
 }
 
 void setup() {

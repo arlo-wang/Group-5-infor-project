@@ -3,5 +3,5 @@
 ## Task allocation
 - ESP32 Camera (zt)
 - FPGA accelerometer (enxing)
-- ESP32 GPS + speaker (arlo)
+- ESP32 GPS + speaker + bluetooth geofencing (arlo)
 - LED screen (either ESP32 or DE10lite) (colby)
