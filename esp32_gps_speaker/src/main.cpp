@@ -4,14 +4,21 @@
 #include "../include/buzzer.hpp"
 #include "../include/wifi.hpp"
 #include "../include/gps.hpp"
-#include "../include/BluetoothGeofencing.hpp"
+#include "../include/bluetooth.hpp"
 // pins used in the project: 2, 39
 constexpr int LED_PIN = 2;
 
 // bluetooth task
 void bluetoothTask(void *pvParameters) {
     while (true) {
-        bluetooth::localLoop();
+        // Only run Bluetooth scanning if GPS doesn't have a valid location
+        if (!gps::hasValidLocation()) {
+            bluetooth::setSleepMode(false);  // Ensure Bluetooth is active
+            bluetooth::localLoop();
+        } else {
+            // If GPS has valid location, put Bluetooth in sleep mode
+            bluetooth::setSleepMode(true);
+        }
         vTaskDelay(10 / portTICK_PERIOD_MS); // delay to avoid task blocking
     }
 }
@@ -23,7 +30,6 @@ void gpsTask(void *pvParameters) {
         vTaskDelay(10 / portTICK_PERIOD_MS); // delay to avoid task blocking
     }
 }
-
 
 // buzzer task
 void buzzerTask(void *pvParameters) {

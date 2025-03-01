@@ -1,23 +1,30 @@
 #pragma once
 
 #include <Arduino.h>
+#include "../include/gps.hpp"
+
+#define BUZZER_PIN 39  // Buzzer pin
 
 namespace buzzer {
-    constexpr int buzzer_PIN = 39;
-
-    // local setup
-    inline void localSetup() {
-        pinMode(buzzer_PIN, OUTPUT);
-    }
-
-    // local loop
-    inline void localLoop() {
-        for (int i = 0; i < 3; i++) {
-            tone(buzzer_PIN, 4000, 500);
-            // Serial.println("Alarm triggered with high frequency");
-            tone(buzzer_PIN, 2000, 500);
-            // Serial.println("Alarm triggered with low frequency");
-            noTone(buzzer_PIN);
-        }
-    }
-}
+    // Buzzer states
+    enum BuzzerState {
+        IDLE,
+        GEOFENCE_ALARM,
+        BLUETOOTH_ALARM,
+        // Other alarm states...
+    };
+    
+    // External declarations
+    extern BuzzerState currentState;
+    extern unsigned long lastBeepTime;
+    extern unsigned long alarmStartTime;
+    extern int alarmSequenceStep;
+    
+    // Function declarations
+    void localSetup();
+    void beep(int frequency, int duration);
+    void localLoop();
+    void stopAlarm();
+    void stopAlarmIfType(BuzzerState alarmType);
+    void triggerAlarm(BuzzerState alarmType);
+} // namespace buzzer
