@@ -4,92 +4,117 @@
 
 namespace bluetooth {
     // Initialize variables
-    BLEScan* pBLEScan = nullptr;
-    unsigned long previousMillis = 0;
-    bool ledState = false;
-    BluetoothState currentState = IDLE;
-    bool sleepMode = false;
-    unsigned long lastScanTime = 0;
+    BLEScan* p_ble_scan = nullptr;
+    unsigned long previous_millis = 0;
+    bool led_state = false;
+    BluetoothState current_state = IDLE;
+    bool sleep_mode = false;
+    unsigned long last_scan_time = 0;
+    std::string last_found_device_name = "";
     
-    void localSetup() {
+    // define the device map (name -> UUID)
+    std::unordered_map<std::string, std::string> TARGET_DEVICES = {
+        {"Arlo's iPhone", "12345678-1234-5678-1234-56789abcdef1"},
+
+        // add more devices as needed
+    };
+    
+    // Bluetooth setup
+    void localSetup() 
+    {
         Serial.println("ESP32-S3 BLE Scanner Initializing...");
         
-        BLEDevice::init("ESP32_Scanner");  // Set ESP32 BLE device name
-        pBLEScan = BLEDevice::getScan();   // Get scan object
-        pBLEScan->setActiveScan(true);     // Enable active scanning (faster discovery)
-        pBLEScan->setInterval(100);
-        pBLEScan->setWindow(99);
+        BLEDevice::init("ESP32_Scanner");   // Set ESP32 BLE device name
+        p_ble_scan = BLEDevice::getScan();  // Get scan object
+        p_ble_scan->setActiveScan(true);    // Enable active scanning (faster discovery)
+        p_ble_scan->setInterval(1600);      // Set scan interval
+        p_ble_scan->setWindow(99);          // Set scan window
         
         Serial.println("Bluetooth scanner initialized");
     }
     
-    void setSleepMode(bool sleep) {
-        sleepMode = sleep;
-        if (sleep && currentState == SCANNING) {
-            pBLEScan->stop();
-            currentState = IDLE;
+    // Set sleep mode
+    void setSleepMode(bool sleep) 
+    {
+        sleep_mode = sleep;
+        if (sleep && current_state == SCANNING) 
+        {
+            p_ble_scan->stop();
+            current_state = IDLE;
             Serial.println("Bluetooth scanner entering sleep mode");
         }
     }
-    
-    bool isDeviceFound() {
-        return currentState == DEVICE_FOUND;
+
+    // Check if a device is found
+    bool isDeviceFound() 
+    {
+        return current_state == DEVICE_FOUND;
     }
-    
-    void localLoop() {
+
+    // Bluetooth loop
+    void localLoop() 
+    {
         // If in sleep mode, do nothing
-        if (sleepMode) {
+        if (sleep_mode) 
+        {
             return;
         }
         
         // Only scan if we're not already scanning and enough time has passed since last scan
-        if (currentState != SCANNING && millis() - lastScanTime > 1000) {
+        if (current_state != SCANNING && millis() - last_scan_time > 1000) 
+        {
             Serial.println("Scanning for BLE devices...");
-            currentState = SCANNING;
+            current_state = SCANNING;
             
             // Start scan
-            BLEScanResults foundDevices = pBLEScan->start(SCAN_TIME, false);
-            lastScanTime = millis();
+            BLEScanResults found_devices = p_ble_scan->start(SCAN_TIME, false);
+            last_scan_time = millis();
             
-            bool deviceFound = false;
+            bool device_found = false;
             
             // Process scan results
-            for (int i = 0; i < foundDevices.getCount(); i++) {
-                BLEAdvertisedDevice device = foundDevices.getDevice(i);
+            for (int i = 0; i < found_devices.getCount(); i++) 
+            {
+                BLEAdvertisedDevice device = found_devices.getDevice(i);
                 
-                // Print device info
-                Serial.printf("Device found: %s - ", device.getAddress().toString().c_str());
-                if (device.haveName()) {
-                    Serial.print(device.getName().c_str());
-                } else {
-                    Serial.print("Unknown");
-                }
-                Serial.printf(" (RSSI: %d)\n", device.getRSSI());
-                
-                // Check if the advertised service UUID matches TARGET_UUID
-                if (device.haveServiceUUID() && device.isAdvertisingService(BLEUUID(TARGET_UUID))) {
-                    Serial.println("Found target BLE device!");
-                    Serial.printf("Device Address: %s\n", device.getAddress().toString().c_str());
-                    Serial.printf("RSSI: %d dBm\n", device.getRSSI());
-                    deviceFound = true;
-                    break;  // Stop scanning after first match
+                // check if the device is advertising any of our target UUIDs
+                if (device.haveServiceUUID()) {
+                    // iterate through all target devices
+                    for (const auto& [device_name, uuid] : TARGET_DEVICES) {
+                        if (device.isAdvertisingService(BLEUUID(uuid.c_str()))) {
+                            Serial.println("Found target BLE device!");
+                            Serial.printf("Device Name: %s\n", device_name.c_str());
+                            Serial.printf("Device Address: %s\n", device.getAddress().toString().c_str());
+                            Serial.printf("RSSI: %d dBm\n", device.getRSSI());
+                            
+                            // save the found device name
+                            last_found_device_name = device_name;
+                            device_found = true;
+                            break;  // break the inner loop
+                        }
+                    }
+                    if (device_found) break;  // break the outer loop
                 }
             }
             
             // Update state based on scan results
-            if (deviceFound) {
-                currentState = DEVICE_FOUND;
+            if (device_found) 
+            {
+                current_state = DEVICE_FOUND;
                 // Stop any Bluetooth-related alarm
                 buzzer::stopAlarmIfType(buzzer::BLUETOOTH_ALARM);
-            } else {
-                currentState = NO_DEVICE;
+            } 
+            else 
+            {
+                current_state = NO_DEVICE;
+                last_found_device_name = "";  // reset the device name
                 Serial.println("No matching device found.");
                 // Trigger alarm if no device found
                 buzzer::triggerAlarm(buzzer::BLUETOOTH_ALARM);
             }
             
             // Clear scan results to free memory
-            pBLEScan->clearResults();
+            p_ble_scan->clearResults();
         }
     }
 } // namespace bluetooth 

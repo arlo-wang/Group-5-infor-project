@@ -5,7 +5,7 @@
 #include "../include/wifi.hpp"
 #include "../include/gps.hpp"
 #include "../include/bluetooth.hpp"
-// pins used in the project: 2, 39
+// pins used in the project: 39, 16, 17
 constexpr int LED_PIN = 2;
 
 // bluetooth task

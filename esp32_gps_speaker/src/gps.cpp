@@ -24,6 +24,11 @@ namespace gps {
         false              // Alarm not triggered
     };
 
+    // variable to track last update time
+    unsigned long last_gps_update = 0;
+    // define update interval as 2000 milliseconds (2 seconds)
+    const unsigned long GPS_UPDATE_INTERVAL = 2000;
+
     // Calculate distance between two points (meters) using Haversine formula
     float calculateDistance(float lat1, float lon1, float lat2, float lon2) {
         const float R = 6371000; // Earth radius in meters
@@ -288,7 +293,7 @@ namespace gps {
 
     // GPS data reading and parsing
     void localLoop() {
-        // Read GPS data
+
         while (GPSSerial.available()) {
             char c = GPSSerial.read();
             gps.last_update = millis();  // Update last data time
@@ -301,7 +306,7 @@ namespace gps {
             // End of NMEA sentence
             if (c == '\n') {
                 // Print the complete NMEA sentence
-                DEBUGSerial.print(nmea_sentence);  
+                // DEBUGSerial.print(nmea_sentence);  
                 // Parse the NMEA sentence
                 parseNMEA(nmea_sentence, gps);
                 // Check geofence status
@@ -316,10 +321,19 @@ namespace gps {
             }
         }
         
-        // If we have new data, display it
-        if (new_data) {
-            displayGPSInfo(gps);
-            new_data = false;
+        // only update GPS data if the specified time interval has passed
+        if (millis() - last_gps_update >= GPS_UPDATE_INTERVAL) {
+            // update location data
+            if (gps.location_valid) {
+                // check geofence
+                checkGeofence(gps, geofence);
+                
+                // display location info (if needed)
+                displayGPSInfo(gps);
+            }
+            
+            // update last update time
+            last_gps_update = millis();
         }
     }
 

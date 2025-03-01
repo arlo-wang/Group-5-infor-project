@@ -4,6 +4,9 @@
 #include "../include/gps.hpp"
 
 #define BUZZER_PIN 39  // Buzzer pin
+#define LEDC_CHANNEL 0 // LEDC channel to use
+#define LEDC_TIMER 0   // LEDC timer to use
+#define LEDC_RESOLUTION 8 // LEDC resolution (8-bit: 0-255)
 
 namespace buzzer {
     // Buzzer states
@@ -15,16 +18,17 @@ namespace buzzer {
     };
     
     // External declarations
-    extern BuzzerState currentState;
-    extern unsigned long lastBeepTime;
-    extern unsigned long alarmStartTime;
-    extern int alarmSequenceStep;
+    extern BuzzerState current_state;
+    extern unsigned long last_beep_time;
+    extern unsigned long alarm_start_time;
+    extern int alarm_sequence_step;
     
     // Function declarations
     void localSetup();
+    void initLEDC(); // Initialize LEDC for buzzer
     void beep(int frequency, int duration);
     void localLoop();
     void stopAlarm();
-    void stopAlarmIfType(BuzzerState alarmType);
-    void triggerAlarm(BuzzerState alarmType);
+    void stopAlarmIfType(BuzzerState alarm_type);
+    void triggerAlarm(BuzzerState alarm_type);
 } // namespace buzzer

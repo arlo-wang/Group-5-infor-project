@@ -11,14 +11,14 @@ namespace wifi {
     void localSetup()
     {
         // connect to WiFi
-        Serial.printf("Connecting to %s ", ssid);
+        // Serial.printf("Connecting to %s ", ssid);
         WiFi.begin(ssid, password);
 
         // wait for WiFi connection
         while (WiFi.status() != WL_CONNECTED) {
-            Serial.print("connecting...");
-            Serial.println("WiFi connected");
-            Serial.print("IP address: ");
+            // Serial.print("connecting...");
+            // Serial.println("WiFi connected");
+            // Serial.print("IP address: ");
             Serial.println(WiFi.localIP());
         }
         
