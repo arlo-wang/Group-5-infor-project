@@ -28,6 +28,8 @@ namespace gps {
     unsigned long last_gps_update = 0;
     // define update interval as 2000 milliseconds (2 seconds)
     const unsigned long GPS_UPDATE_INTERVAL = 2000;
+    // define GPS signal timeout (10 seconds)
+    const unsigned long GPS_SIGNAL_TIMEOUT = 10000;
 
     // Calculate distance between two points (meters) using Haversine formula
     float calculateDistance(float lat1, float lon1, float lat2, float lon2) {
@@ -262,7 +264,19 @@ namespace gps {
             }
         } 
         else {
-            DEBUGSerial.println("INVALID");
+            DEBUGSerial.println("INVALID - NO SIGNAL");
+            
+            // Show last known position if available
+            if (gps.last_valid_fix > 0) {
+                DEBUGSerial.println("Last known position (NOT CURRENT):");
+                DEBUGSerial.print("  Latitude: ");
+                DEBUGSerial.println(gps.latitude, 6);
+                DEBUGSerial.print("  Longitude: ");
+                DEBUGSerial.println(gps.longitude, 6);
+            } else {
+                DEBUGSerial.println("No position data available");
+            }
+            
             DEBUGSerial.print("Time since last valid fix: ");
             if (gps.last_valid_fix > 0) {
                 DEBUGSerial.print((millis() - gps.last_valid_fix) / 1000);
@@ -321,15 +335,25 @@ namespace gps {
             }
         }
         
+        // Check for GPS signal timeout
+        if (gps.location_valid && gps.last_valid_fix > 0) {
+            unsigned long time_since_last_fix = millis() - gps.last_valid_fix;
+            if (time_since_last_fix > GPS_SIGNAL_TIMEOUT) {
+                // Mark location as invalid if timeout exceeded
+                gps.location_valid = false;
+                DEBUGSerial.println("GPS signal lost: No valid data received for over 10 seconds");
+            }
+        }
+        
         // only update GPS data if the specified time interval has passed
         if (millis() - last_gps_update >= GPS_UPDATE_INTERVAL) {
-            // update location data
+            // Always display GPS info, regardless of validity
+            // This will show "INVALID" status when location is not valid
+            displayGPSInfo(gps);
+            
+            // Check geofence only if location is valid
             if (gps.location_valid) {
-                // check geofence
                 checkGeofence(gps, geofence);
-                
-                // display location info (if needed)
-                displayGPSInfo(gps);
             }
             
             // update last update time
