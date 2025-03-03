@@ -1,14 +1,22 @@
+// Define the camera model before including camera_pins.h
+#define CAMERA_MODEL_ESP32S3_EYE  // Has PSRAM; adjust if necessary
+
+//trigger pin for FPGA (set up as an input with pulldown resistor)
+#define TRIGGER_PIN 33
+
+#include "camera_pins.h"
 #include <Arduino.h>
-#include "esp_camera.h"
-#include "tjpgd.h"  // Tiny JPEG Decoder
-#include "esp_http_server.h"
-#include "esp_heap_caps.h"
 #include <WiFi.h>
 
-#define CAMERA_MODEL_ESP32S3_EYE  // Has PSRAM
-#include "camera_pins.h"
-// Define Trigger Pin from FPGA
-#define TRIGGER_PIN 2  
+#include "esp_camera.h"
+#include "tjpgd.h"  // Tiny JPEG Decoder (if needed)
+#include "esp_http_server.h"
+#include "esp_heap_caps.h"
+#include "base64.h"
+
+// UART settings for FPGA communication
+#define UART_TX_PIN 17  // Update according to your wiring
+#define UART_RX_PIN 16  // Update according to your wiring
 
 const char *ssid = "zi";
 const char *password = "zitongissmart";
@@ -20,7 +28,15 @@ volatile bool captureRequested = false;
 camera_fb_t *last_captured_fb = NULL;
 
 // ---------------------------
-// Detect Barcode Presence (Not Decoding, Only Detection)
+// Interrupt Service Routine for Trigger
+//FPGA → ESP32-S3
+// ---------------------------
+void IRAM_ATTR onTrigger() {
+  captureRequested = true;
+}
+
+// ---------------------------
+// Barcode Detection (Edge Count Method)
 // ---------------------------
 bool detectBarcode(uint8_t* grayImg, int width, int height) {
     int threshold = 25;  // Lowered threshold to detect more edges
@@ -41,19 +57,9 @@ bool detectBarcode(uint8_t* grayImg, int width, int height) {
     }
 
     Serial.printf("Edge count: %d\n", edgeCount);
-
-    // More lenient barcode detection condition
     return (edgeCount >= min_edges && edgeCount <= max_edges);
 }
 
-// ---------------------------
-// ESP32 Trigger Interrupt
-// ---------------------------
-void IRAM_ATTR onTrigger() {
-    captureRequested = true;
-}
-
-void startCameraServer();
 
 // ---------------------------
 // Capture and Process Image
@@ -61,7 +67,8 @@ void startCameraServer();
 void captureAndProcessImage() {
     camera_fb_t *fb = esp_camera_fb_get();
     if (!fb) {
-        Serial.println("❌ Camera capture failed");
+        Serial.println("Camera capture failed");
+        Serial1.println("FPGA: Capture failed");
         return;
     }
   
@@ -69,36 +76,50 @@ void captureAndProcessImage() {
     int width = fb->width;
     int height = fb->height;
 
-    // Perform grayscale conversion (for barcode detection)
+    // Allocate grayscale image buffer
     uint8_t *grayImg = (uint8_t*)ps_malloc(width * height);
     if (!grayImg) {
-        Serial.println("❌ Memory allocation failed");
+        Serial.println("Memory allocation failed");
+        Serial1.println("FPGA: Memory alloc failed");
         esp_camera_fb_return(fb);
         return;
     }
 
+    // Convert image to grayscale (simple copy since PIXFORMAT_JPEG is used, you may need proper conversion)
     for (int i = 0; i < width * height; i++) {
-        grayImg[i] = fb->buf[i];  // Convert to grayscale
+        grayImg[i] = fb->buf[i];
     }
 
     if (detectBarcode(grayImg, width, height)) {
         Serial.println("✅ Barcode detected! Saving image...");
-        
-        // Free last stored frame buffer
+        Serial1.println("FPGA: Barcode detected");
+
+        // Free last stored frame buffer if exists
         if (last_captured_fb) {
             esp_camera_fb_return(last_captured_fb);
         }
-
-        // Store the new captured frame buffer
         last_captured_fb = fb;
     } else {
         Serial.println("❌ No barcode detected. Image will NOT be uploaded.");
-        
-        // If no barcode is detected, **DO NOT update last_captured_fb**
+        Serial1.println("FPGA: No barcode detected");
         esp_camera_fb_return(fb);  
     }
 
     free(grayImg);
+}
+
+// Function to simulate cloud data reception
+String getCloudData() {
+    // Simulate retrieving data from a cloud service (e.g., Firebase, AWS, Google Cloud)
+    String cloud_data = "66666";  // Example: Sending number 42 to FPGA
+    Serial.printf("📡 Received from cloud: %s\n", cloud_data.c_str());
+    return cloud_data;
+}
+
+// Function to send data to FPGA via UART
+void sendDataToFPGA(String data) {
+    Serial.printf("🔄 Sending to FPGA: %s\n", data.c_str());
+    Serial1.println(data);  // Send the data over UART to FPGA
 }
 
 
@@ -108,10 +129,16 @@ void captureAndProcessImage() {
 void setup() {
     Serial.begin(115200);
     Serial.println();
-
+    
+    // Initialize trigger pin and attach interrupt (for FPGA trigger signal)
     pinMode(TRIGGER_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(TRIGGER_PIN), onTrigger, RISING);
-    
+
+    // Initialize UART for FPGA communication on Serial1
+    Serial1.begin(115200, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
+    Serial.println("UART for FPGA initialized.");
+    Serial1.println("FPGA: UART initialized");
+
     // Camera Initialization
     camera_config_t config;
     config.ledc_channel = LEDC_CHANNEL_0;
@@ -133,37 +160,37 @@ void setup() {
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
-    config.frame_size = FRAMESIZE_QVGA;
-    config.pixel_format = PIXFORMAT_JPEG;
-    config.fb_location = CAMERA_FB_IN_PSRAM;
+    config.pixel_format = PIXFORMAT_JPEG;  // Capture JPEG
+    config.frame_size = FRAMESIZE_QVGA;      // 320x240 resolution
+    config.fb_location = CAMERA_FB_IN_PSRAM;  // Use PSRAM if available
     config.jpeg_quality = 10;
     config.fb_count = 2;
-    
+
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
         Serial.printf("❌ Camera init failed with error 0x%x\n", err);
+        Serial1.println("FPGA: Camera init failed");
         return;
     }
-    
     Serial.println("📷 Camera initialized.");
+    Serial1.println("FPGA: Camera init successful");
 
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
+    // Initialize WiFi (if using cloud-based features)
+    WiFi.begin(ssid, password);
+    WiFi.setSleep(false);
+    Serial.print("WiFi connecting");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial1.println("FPGA: WiFi connected");
 
-  Serial.print("WiFi connecting");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-  startCameraServer();
-
-  Serial.print("Camera Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("' to connect");
-
+    Serial.print("Camera Ready! Connect via http://");
+    Serial.println(WiFi.localIP());
+    Serial1.print("FPGA: Camera Ready, IP ");
+    Serial1.println(WiFi.localIP());
 }
 
 // ---------------------------
@@ -173,7 +200,17 @@ void loop() {
     if (captureRequested) {
         captureRequested = false;
         Serial.println("⚡ Trigger received -> Capturing image...");
+        Serial1.println("FPGA: Trigger received, capturing image...");
         captureAndProcessImage();
     }
-    delay(100);
+
+    // Fetch data from the cloud every 10 seconds and send it to FPGA
+    static unsigned long lastCloudUpdate = 0;
+    if (millis() - lastCloudUpdate > 10000) {  // Every 10 seconds
+        lastCloudUpdate = millis();
+        String cloudData = getCloudData();  // Get data from the cloud
+        sendDataToFPGA(cloudData);  // Send it to FPGA over UART
+    }
+
+    delay(5000);
 }
