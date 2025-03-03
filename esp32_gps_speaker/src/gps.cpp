@@ -116,6 +116,7 @@ namespace gps {
         return millis() - gps.last_valid_fix;
     }
 
+    // parse NMEA sentence
     void parseNMEA(String nmea, GPSData &gps) {
         // Check if it's a GGA sentence (contains basic fix data)
         if (nmea.startsWith("$GPGGA") || nmea.startsWith("$GNGGA")) 
@@ -228,6 +229,7 @@ namespace gps {
         }
     }
 
+    // display GPS information
     void displayGPSInfo(const GPSData &gps) {
         DEBUGSerial.println("\n--- GPS Information ---");
         DEBUGSerial.print("Location: ");
@@ -263,6 +265,7 @@ namespace gps {
                 DEBUGSerial.println(" meters");
             }
         } 
+        // if the location is not valid
         else {
             DEBUGSerial.println("INVALID - NO SIGNAL");
             

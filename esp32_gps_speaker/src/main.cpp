@@ -42,9 +42,9 @@ void buzzerTask(void *pvParameters) {
 // other task
 void otherTask(void *pvParameters) {
     while (true) {
-        // LED keep off if WiFi is connected
-        if (WiFi.status() == WL_CONNECTED) digitalWrite(LED_PIN, LOW);
-        else digitalWrite(LED_PIN, HIGH);
+        // LED keep on if buzzer is on
+        if (buzzer::isBuzzerOn()) digitalWrite(LED_PIN, HIGH);
+        else digitalWrite(LED_PIN, LOW);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS); // delay to avoid task blocking
     }

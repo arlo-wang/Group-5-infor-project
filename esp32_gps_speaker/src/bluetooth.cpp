@@ -15,7 +15,10 @@ namespace bluetooth {
     // define the device map (name -> UUID)
     std::unordered_map<std::string, std::string> TARGET_DEVICES = {
         {"Arlo's iPhone", "12345678-1234-5678-1234-56789abcdef1"},
-
+        {"Zitong's iPhone", "12345678-1234-5678-1234-56789abcdef2"},
+        {"Colby's iPhone", "12345678-1234-5678-1234-56789abcdef3"},
+        {"Enxing's iPhone", "12345678-1234-5678-1234-56789abcdef4"},
+        {"Cole's iPhone", "12345678-1234-5678-1234-56789abcdef5"}
         // add more devices as needed
     };
     
@@ -46,19 +49,13 @@ namespace bluetooth {
     }
 
     // Check if a device is found
-    bool isDeviceFound() 
-    {
-        return current_state == DEVICE_FOUND;
-    }
+    bool isDeviceFound() return current_state == DEVICE_FOUND;
 
     // Bluetooth loop
     void localLoop() 
     {
         // If in sleep mode, do nothing
-        if (sleep_mode) 
-        {
-            return;
-        }
+        if (sleep_mode) return;
         
         // Only scan if we're not already scanning and enough time has passed since last scan
         if (current_state != SCANNING && millis() - last_scan_time > 1000) 
@@ -104,12 +101,12 @@ namespace bluetooth {
                 // Stop any Bluetooth-related alarm
                 buzzer::stopAlarmIfType(buzzer::BLUETOOTH_ALARM);
             } 
+            // if no device found, trigger alarm
             else 
             {
                 current_state = NO_DEVICE;
                 last_found_device_name = "";  // reset the device name
                 Serial.println("No matching device found.");
-                // Trigger alarm if no device found
                 buzzer::triggerAlarm(buzzer::BLUETOOTH_ALARM);
             }
             

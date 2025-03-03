@@ -5,8 +5,10 @@
 
 namespace wifi {
     // WiFi settings
-    const char* ssid = "VM5892311";
-    const char* password = "q6hQzcdmjqwq"; 
+    // const char* ssid = "VM5892311";
+    // const char* password = "q6hQzcdmjqwq"; 
+    const char* ssid = "Arlo";
+    const char* password = "arloissmart"; 
 
     void localSetup()
     {
@@ -16,15 +18,16 @@ namespace wifi {
 
         // wait for WiFi connection
         while (WiFi.status() != WL_CONNECTED) {
-            // Serial.print("connecting...");
-            // Serial.println("WiFi connected");
-            // Serial.print("IP address: ");
-            Serial.println(WiFi.localIP());
+            Serial.print("connecting...");
+            delay(500);
         }
         
-        // WiFi connected
-        Serial.println("\nWiFi connected!");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
+        // Print WiFi info for threee times when WiFi connected
+        for(int i = 0; i < 3; i++) {
+            Serial.println("\nWiFi connected!");
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+            delay(100);
+        }
     }
 } // namespace wifi
