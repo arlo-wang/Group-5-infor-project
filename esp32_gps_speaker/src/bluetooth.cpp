@@ -11,7 +11,6 @@ namespace bluetooth {
     bool sleep_mode = false;
     unsigned long last_scan_time = 0;
     std::vector<std::string> last_found_device_names;
-    // std::string last_found_device_name = "";
     
     // define the device map (name -> UUID)
     std::unordered_map<std::string, std::string> TARGET_DEVICES = {
@@ -85,13 +84,6 @@ namespace bluetooth {
                     // iterate through all target devices
                     for (const auto& [device_name, uuid] : TARGET_DEVICES) {
                         if (device.isAdvertisingService(BLEUUID(uuid.c_str()))) {
-                            // Serial.println("--------------------------------");
-                            // Serial.println("Found target BLE device!");
-                            // Serial.printf("Device Name: %s\n", device_name.c_str());
-                            // Serial.printf("Device Address: %s\n", device.getAddress().toString().c_str());
-                            // Serial.printf("RSSI: %d dBm\n", device.getRSSI());
-                            // Serial.println("--------------------------------");
-                            // save the found device name
                             last_found_device_names.push_back(device_name);
                             device_found = true;
                             // Don't break, continue to find all matching devices

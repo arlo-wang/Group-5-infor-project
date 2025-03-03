@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 #include <math.h>  // For distance calculation
+#include <HTTPClient.h>  // add HTTP client library
+#include <ArduinoJson.h>  // add JSON library
 
 // Serial port definitions
 #define GPSSerial Serial2
@@ -61,6 +63,10 @@ namespace gps {
     void resetGeofenceAlarm();
     bool hasValidLocation();
     unsigned long getTimeSinceLastValidFix();
+    String createGPSJson(const GPSData &gps);
+    void sendGPSData(const String &json_data, const String &serverUrl);
+
+    extern const char* serverUrl;
 
     // External declarations for global variables
     extern String nmea_sentence;

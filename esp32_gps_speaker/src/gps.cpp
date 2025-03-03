@@ -31,6 +31,9 @@ namespace gps {
     // define GPS signal timeout (10 seconds)
     const unsigned long GPS_SIGNAL_TIMEOUT = 10000;
 
+    // define server URL
+    const char* serverUrl = "http://........"; 
+
     // Calculate distance between two points (meters) using Haversine formula
     float calculateDistance(float lat1, float lon1, float lat2, float lon2) {
         const float R = 6371000; // Earth radius in meters
@@ -308,6 +311,45 @@ namespace gps {
         DEBUGSerial.println("Waiting for GPS data...");
     }
 
+    // Create JSON string from GPS data
+    String createGPSJson(const GPSData &gps) {
+        // reduce JSON document size
+        StaticJsonDocument<256> doc;  // reduce from 512 to 256
+
+        // only include the most important data
+        doc["lat"] = gps.latitude;    // shorten key name
+        doc["lon"] = gps.longitude;
+        doc["alt"] = gps.altitude;
+        doc["spd"] = gps.speed;
+        doc["sat"] = gps.satellites_visible;
+        doc["fix"] = gps.fix_quality;
+
+        char timeStr[16];
+        sprintf(timeStr, "%02d%02d%02d%02d%02d%02d",
+                gps.year % 100, gps.month, gps.day,
+                gps.hour, gps.minute, gps.second);
+        doc["time"] = timeStr;
+
+        String jsonString;
+        serializeJson(doc, jsonString);
+        return jsonString;
+    }
+
+    // send GPS data to server 
+    void sendGPSDataToServer(const String &jsonData, const String &serverUrl) {
+        HTTPClient http;
+        http.begin(serverUrl);
+        http.addHeader("Content-Type", "application/json");
+        
+        int httpCode = http.POST(jsonData);
+        if (httpCode > 0) {
+            DEBUGSerial.printf("HTTP:%d\n", httpCode);
+        } else {
+            DEBUGSerial.printf("ERR:%d\n", httpCode);
+        }
+        http.end();
+    }
+
     // GPS data reading and parsing
     void localLoop() {
 
@@ -357,6 +399,16 @@ namespace gps {
             // Check geofence only if location is valid
             if (gps.location_valid) {
                 checkGeofence(gps, geofence);
+            }
+            
+            // send GPS data to server
+            if (gps.location_valid) {
+                // create JSON data
+                String jsonData = createGPSJson(gps);
+                DEBUGSerial.println("Sending GPS data: " + jsonData);
+                
+                // send to server
+                sendGPSDataToServer(jsonData, serverUrl);
             }
             
             // update last update time
