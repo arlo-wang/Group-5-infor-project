@@ -30,7 +30,6 @@ namespace buzzer {
             alarm_start_time = millis();
             alarm_sequence_step = 0;
             Serial.print("Alarm triggered: ");
-            Serial.println(alarm_type);
         }
     }
     
@@ -38,7 +37,7 @@ namespace buzzer {
     void localLoop() {
         // Check GPS geofence alarm
         if (gps::isGeofenceAlarmTriggered() && current_state == IDLE) {
-            triggerAlarm(GEOFENCE_ALARM);
+            triggerAlarm(ALARM);
         }
         
         // Declare variables outside the switch statement
@@ -47,7 +46,7 @@ namespace buzzer {
         
         // Control buzzer based on current state
         switch (current_state) {
-            case GEOFENCE_ALARM:
+            case ALARM:
                 // Geofence alarm pattern: alternating high-low tones
                 current_time = millis();
                 elapsed_time = current_time - last_beep_time;
@@ -56,9 +55,12 @@ namespace buzzer {
                     last_beep_time = current_time;
                     
                     // Alternate between high and low frequency tones
-                    if (alarm_sequence_step % 2 == 0) {
+                    if (alarm_sequence_step % 2 == 0) 
+                    {
                         beep(4000, 500);  // High frequency (4000Hz)
-                    } else {
+                    } 
+                    else 
+                    {
                         beep(2000, 500);  // Low frequency (2000Hz)
                     }
                     
@@ -68,29 +70,6 @@ namespace buzzer {
                     
                     // After 6 steps (3 high-low pairs), reset if needed
                     if (alarm_sequence_step >= 6) {
-                        alarm_sequence_step = 0;
-                    }
-                }
-                break;
-                
-            case BLUETOOTH_ALARM:
-                // Bluetooth alarm pattern: rapid beeps
-                current_time = millis();
-                elapsed_time = current_time - last_beep_time;
-                
-                if (elapsed_time >= 200) {
-                    last_beep_time = current_time;
-                    
-                    if (alarm_sequence_step % 2 == 0) {
-                        beep(3000, 200);  // Medium frequency (3000Hz)
-                    } else {
-                        noTone(buzzer_PIN);
-                    }
-                    
-                    alarm_sequence_step++;
-                    
-                    // After 10 steps (5 beeps), reset
-                    if (alarm_sequence_step >= 10) {
                         alarm_sequence_step = 0;
                     }
                 }
@@ -110,7 +89,7 @@ namespace buzzer {
         noTone(buzzer_PIN);
         
         // Reset GPS geofence alarm if that was the source
-        if (current_state == GEOFENCE_ALARM) {
+        if (current_state == ALARM) {
             gps::resetGeofenceAlarm();
         }
     }

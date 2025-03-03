@@ -12,8 +12,7 @@ namespace buzzer {
     // Buzzer states
     enum BuzzerState {
         IDLE,
-        GEOFENCE_ALARM,
-        BLUETOOTH_ALARM,
+        ALARM,
         // Other alarm states...
     };
     

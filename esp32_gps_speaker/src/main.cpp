@@ -43,7 +43,7 @@ void buzzerTask(void *pvParameters) {
 void otherTask(void *pvParameters) {
     while (true) {
         // LED keep on if buzzer is on
-        if (buzzer::isBuzzerOn()) digitalWrite(LED_PIN, HIGH);
+        if (buzzer::current_state == buzzer::ALARM) digitalWrite(LED_PIN, HIGH);
         else digitalWrite(LED_PIN, LOW);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS); // delay to avoid task blocking

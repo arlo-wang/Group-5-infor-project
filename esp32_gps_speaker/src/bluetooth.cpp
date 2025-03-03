@@ -10,7 +10,8 @@ namespace bluetooth {
     BluetoothState current_state = IDLE;
     bool sleep_mode = false;
     unsigned long last_scan_time = 0;
-    std::string last_found_device_name = "";
+    std::vector<std::string> last_found_device_names;
+    // std::string last_found_device_name = "";
     
     // define the device map (name -> UUID)
     std::unordered_map<std::string, std::string> TARGET_DEVICES = {
@@ -49,7 +50,9 @@ namespace bluetooth {
     }
 
     // Check if a device is found
-    bool isDeviceFound() return current_state == DEVICE_FOUND;
+    bool isDeviceFound() {
+        return current_state == DEVICE_FOUND;
+    }
 
     // Bluetooth loop
     void localLoop() 
@@ -70,6 +73,9 @@ namespace bluetooth {
             bool device_found = false;
             
             // Process scan results
+            // Clear the vector before adding new devices
+            last_found_device_names.clear();
+            
             for (int i = 0; i < found_devices.getCount(); i++) 
             {
                 BLEAdvertisedDevice device = found_devices.getDevice(i);
@@ -79,19 +85,28 @@ namespace bluetooth {
                     // iterate through all target devices
                     for (const auto& [device_name, uuid] : TARGET_DEVICES) {
                         if (device.isAdvertisingService(BLEUUID(uuid.c_str()))) {
-                            Serial.println("Found target BLE device!");
-                            Serial.printf("Device Name: %s\n", device_name.c_str());
-                            Serial.printf("Device Address: %s\n", device.getAddress().toString().c_str());
-                            Serial.printf("RSSI: %d dBm\n", device.getRSSI());
-                            
+                            // Serial.println("--------------------------------");
+                            // Serial.println("Found target BLE device!");
+                            // Serial.printf("Device Name: %s\n", device_name.c_str());
+                            // Serial.printf("Device Address: %s\n", device.getAddress().toString().c_str());
+                            // Serial.printf("RSSI: %d dBm\n", device.getRSSI());
+                            // Serial.println("--------------------------------");
                             // save the found device name
-                            last_found_device_name = device_name;
+                            last_found_device_names.push_back(device_name);
                             device_found = true;
-                            break;  // break the inner loop
+                            // Don't break, continue to find all matching devices
                         }
                     }
-                    if (device_found) break;  // break the outer loop
                 }
+            }
+            
+            // Print all found devices
+            if (!last_found_device_names.empty()) {
+                Serial.println("All found devices:");
+                for (const auto& name : last_found_device_names) {
+                    Serial.printf("- %s\n", name.c_str());
+                }
+                Serial.println("--------------------------------");
             }
             
             // Update state based on scan results
@@ -99,15 +114,16 @@ namespace bluetooth {
             {
                 current_state = DEVICE_FOUND;
                 // Stop any Bluetooth-related alarm
-                buzzer::stopAlarmIfType(buzzer::BLUETOOTH_ALARM);
-            } 
+                buzzer::stopAlarmIfType(buzzer::ALARM);
+            }
+             
             // if no device found, trigger alarm
             else 
             {
                 current_state = NO_DEVICE;
-                last_found_device_name = "";  // reset the device name
+                last_found_device_names = {};  // reset the device name
                 Serial.println("No matching device found.");
-                buzzer::triggerAlarm(buzzer::BLUETOOTH_ALARM);
+                buzzer::triggerAlarm(buzzer::ALARM);
             }
             
             // Clear scan results to free memory
