@@ -19,7 +19,7 @@ STATIC_ROOT = "static/"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
+DEBUG = True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
@@ -131,39 +131,13 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-POSTGRES_DB=os.environ.get("POSTGRES_DB")
-POSTGRES_USER=os.environ.get("POSTGRES_USER")
-POSTGRES_PASSWORD=os.environ.get("POSTGRES_PASSWORD")
-POSTGRES_HOST=os.environ.get("POSTGRES_HOST")
-POSTGRES_PORT=os.environ.get("POSTGRES_PORT")
 
-DB_IS_AVAILABLE = all([
-    POSTGRES_DB,
-    POSTGRES_USER,
-    POSTGRES_PASSWORD,
-    POSTGRES_HOST,
-    POSTGRES_PORT
-])
-
-if DB_IS_AVAILABLE:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": POSTGRES_DB,
-            "USER": POSTGRES_USER,
-            "PASSWORD": POSTGRES_PASSWORD,
-            "HOST": POSTGRES_HOST,
-            "PORT": POSTGRES_PORT,
-        }
-    }
-else:
-    DATABASES = {
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -200,8 +174,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
-#MEDIA_URL = "images/"
-#MEDIA_ROOT = 'static/images'
+MEDIA_URL = "images/"
+MEDIA_ROOT = 'static/images'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -209,24 +183,3 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
-
-DEFAULT_S3_STORAGE_OPTIONS = {
-    "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
-    "secret_key": os.environ.get("AWS_SECRET_ACCESS_KEY"),
-    "bucket_name": 'longfei-cn',
-    "region_name": 'ap-southeast-1',
-    "endpoint_url": "https://s3.ap-southeast-1.amazonaws.com/",
-    "querystring_auth": False,
-}
-
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-          **DEFAULT_S3_STORAGE_OPTIONS
-        },
-    },
-    "staticfiles" : {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
-}

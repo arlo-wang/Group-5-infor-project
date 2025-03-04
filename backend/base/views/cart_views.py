@@ -2,17 +2,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
-from base.models import ShoppingCart
+from base.models import Cart
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getCart(request):
     response = []
     user = request.user
-    if not ShoppingCart.objects.filter(user=user).exists():
-        cart = ShoppingCart.objects.create(user=user)
+    if not Cart.objects.filter(user=user).exists():
+        cart = Cart.objects.create(user=user)
         return Response(response)
-    cart = ShoppingCart.objects.get(user=user)
+    cart = Cart.objects.get(user=user)
     cartList = cart.cartItems[:-1].split(",")
     if cartList != ['']:
         for item in cartList:
@@ -30,7 +30,7 @@ def getCart(request):
 def updateCart(request):
     user = request.user
     data = request.data
-    cart = ShoppingCart.objects.get(user=user)
+    cart = Cart.objects.get(user=user)
     cartList = cart.cartItems[:-1].split(",")
     if cartList != ['']:
         for i in range(len(cartList) - 1, -1, -1):
@@ -54,10 +54,10 @@ def addToCart(request):
     user = request.user
     data = request.data
     change = False
-    if not ShoppingCart.objects.filter(user=user).exists():
-        cart = ShoppingCart.objects.create(user=user, cartItems=f"{data['idx']}:{data['qty']}:{data['size']},")
+    if not Cart.objects.filter(user=user).exists():
+        cart = Cart.objects.create(user=user, cartItems=f"{data['idx']}:{data['qty']}:{data['size']},")
         return Response("Added", status=200)
-    cart = ShoppingCart.objects.get(user=user)
+    cart = Cart.objects.get(user=user)
     cartList = cart.cartItems[:-1].split(",")
     if cartList != ['']:
         for i in range(len(cartList)):
