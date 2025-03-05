@@ -2,7 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
-from base.models import Cart
+from base.models import Cart, Scanner
+from base.serializer import ScannerSerializer
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -74,3 +75,9 @@ def addToCart(request):
             cart.cartItems = (",".join(cartList) + ",")
     cart.save()
     return Response("Added", status=200)
+
+@api_view(['GET'])
+def getCoords(request):
+    coords = Scanner.objects.all()
+    serializer = ScannerSerializer(coords, many=True)
+    return Response(serializer.data)

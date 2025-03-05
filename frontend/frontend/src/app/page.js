@@ -1,24 +1,54 @@
 'use client'; // Make sure this is a client component since it uses hooks
 
-import React from 'react';
+import { React, useState, useEffect } from 'react';
 import { GoogleMap, Circle, useLoadScript } from '@react-google-maps/api';
 
 const GeofenceMap = () => {
-  const geofences = [
-    {
-      center: { lat: 51.498, lng: -0.176 },
-      radius: 10, // meters
-    },
-    {
-      center: { lat: 51.494, lng: -0.184 },
-      radius: 20, // meters
-    },
-    {
-      center: { lat: 51.496, lng: -0.174 },
-      radius: 10
-    }
-  ];
+  const [geofences, setGeofences] = useState([])
 
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/api/cart/location/`, {
+      method: "GET",
+      headers: {
+          'Content-Type': 'application/json'
+      }}).then((res) => {
+      if (res.ok) {
+          res.json().then((data) => {
+              setGeofences(data);
+          })
+      } else {
+        setGeofences([
+          {
+            center: { lat: 51.498, lng: -0.176 },
+            radius: 10, // meters
+          },
+          {
+            center: { lat: 51.494, lng: -0.184 },
+            radius: 200, // meters
+          },
+          {
+            center: { lat: 51.496, lng: -0.174 },
+            radius: 10
+          }
+        ]);
+      }
+    }).catch(_ => {
+      setGeofences([
+        {
+          center: { lat: 51.498, lng: -0.176 },
+          radius: 10, // meters
+        },
+        {
+          center: { lat: 51.494, lng: -0.184 },
+          radius: 200, // meters
+        },
+        {
+          center: { lat: 51.496, lng: -0.174 },
+          radius: 10
+        }
+      ]);
+    })
+  }, [])
   // Use useLoadScript hook
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', 
