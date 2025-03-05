@@ -7,7 +7,7 @@ const GeofenceMap = () => {
   const [geofences, setGeofences] = useState([])
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/cart/location/`, {
+    fetch(`http://3.8.78.228:8000/api/cart/location/`, {
       method: "GET",
       headers: {
           'Content-Type': 'application/json'
