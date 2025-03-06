@@ -5,8 +5,16 @@
 #include "../include/wifi.hpp"
 #include "../include/gps.hpp"
 #include "../include/bluetooth.hpp"
+#include "../include/LCD.hpp"
 // pins used in the project: 39, 16, 17
 constexpr int LED_PIN = 2;
+
+// LCD pins 
+constexpr int TFT_CS = 15;
+constexpr int TFT_DC = 5;
+constexpr int TFT_RST = 4;
+
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
 // bluetooth task
 void bluetoothTask(void *pvParameters) {
@@ -39,6 +47,13 @@ void buzzerTask(void *pvParameters) {
     }
 }
 
+void LCDTask(void *pvParameters) {
+    while (true) {
+        LCD::localLoop();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
 // other task
 void otherTask(void *pvParameters) {
     while (true) {
@@ -60,6 +75,7 @@ void setup()
     buzzer::localSetup();
     bluetooth::localSetup();
     gps::localSetup();
+    LCD::localSetup();
 
     // buzzer task
     xTaskCreatePinnedToCore(
@@ -92,6 +108,16 @@ void setup()
         1,          // priority
         NULL,       // task handle
         1           // run on core 1
+    );
+
+    xTaskCreatePinnedtoCore(
+        LCDTask,    // task function
+        "LCD Task", // task name
+        10000,        // stack size
+        NULL,         // task parameters
+        1,            // priority
+        NULL,         // task handle
+        1             // run on core 1
     );
 
     // other task
