@@ -14,7 +14,7 @@ from pyzbar.pyzbar import decode
 
 @api_view(['POST'])
 def getProducts(request):
-    data = request.POST.get('image')
+    data = request.data['image']
     url_decoded_data = urllib.parse.unquote(data)
     image_data = base64.b64decode(url_decoded_data)
     image = Image.open(BytesIO(image_data))
