@@ -2,82 +2,38 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
-from base.models import Cart, Scanner
+from base.models import Cart, Scanner, Product
 from base.serializer import ScannerSerializer
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def getCart(request):
-    response = []
-    user = request.user
-    if not Cart.objects.filter(user=user).exists():
-        cart = Cart.objects.create(user=user)
-        return Response(response)
-    cart = Cart.objects.get(user=user)
+    response = 0
+    id = request.data['id']
+    cart = Cart.objects.get(_id=id)
+    if cart.cartItems == "":
+        return 0
     cartList = cart.cartItems[:-1].split(",")
     if cartList != ['']:
         for item in cartList:
-            itemId, qty, size = item.split(":")
-            product_dict = {
-                '_id': itemId,
-                'quantity': qty,
-                'size': size
-            }
-            response.append(product_dict)
+            itemId, qty = item.split(":")
+            product = Product.objects.get(_id=itemId)
+            response += (product.price * int(qty))
     return Response(response)
-
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def updateCart(request):
-    user = request.user
-    data = request.data
-    cart = Cart.objects.get(user=user)
-    cartList = cart.cartItems[:-1].split(",")
-    if cartList != ['']:
-        for i in range(len(cartList) - 1, -1, -1):
-            itemId, _, size = cartList[i].split(":")
-            if itemId == str(data["idx"]) and data["qty"] == 0 and size==data["size"]:
-                del cartList[i]
-            elif itemId == str(data["idx"]) and size == data["size"]:
-                cartList[i] = f"{itemId}:{data['qty']}:{size}"
-            else:
-                pass
-    if cartList == []:
-        cart.cartItems = ""
-    else:
-        cart.cartItems = (",".join(cartList) + ",")
-    cart.save()
-    return Response("Updated", status=201)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def addToCart(request):
-    user = request.user
-    data = request.data
-    change = False
-    if not Cart.objects.filter(user=user).exists():
-        cart = Cart.objects.create(user=user, cartItems=f"{data['idx']}:{data['qty']}:{data['size']},")
-        return Response("Added", status=200)
-    cart = Cart.objects.get(user=user)
-    cartList = cart.cartItems[:-1].split(",")
-    if cartList != ['']:
-        for i in range(len(cartList)):
-            itemId, _, size = cartList[i].split(":")
-            if itemId == str(data["idx"]) and size == data["size"]:
-                cartList[i] = f"{itemId}:{data['qty']}:{data['size']}"
-                cart.cartItems = (",".join(cartList) + ",")
-                change=True
-    if not change:
-        if cartList == ['']:
-            cart.cartItems = f"{data['idx']}:{data['qty']}:{data['size']},"
-        else:
-            cartList.append(f"{data['idx']}:{data['qty']}:{data['size']}")
-            cart.cartItems = (",".join(cartList) + ",")
-    cart.save()
-    return Response("Added", status=200)
 
 @api_view(['GET'])
 def getCoords(request):
     coords = Scanner.objects.all()
     serializer = ScannerSerializer(coords, many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+def updateCoords(request):
+    try:
+        data = request.data
+        id, lat, lng, radius = data['id'], data['lat'], data['lng'], data['radius']
+        scanner = Scanner.objects.get(_id=id)
+        scanner.location = f"{lat},{lng},{radius}"
+        scanner.save()
+        return Response("Successful", status=200)
+    except Exception as e:
+        return Response(str(e), status=400)

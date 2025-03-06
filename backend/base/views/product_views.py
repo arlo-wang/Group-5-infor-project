@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from base.models import Product
+from base.models import Product, Cart
 import urllib, base64
 
 from base.serializer import ProductSerializer
@@ -14,7 +14,7 @@ from pyzbar.pyzbar import decode
 
 @api_view(['POST'])
 def getProducts(request):
-    data = request.data['image']
+    data = request.POST.get('image')
     url_decoded_data = urllib.parse.unquote(data)
     image_data = base64.b64decode(url_decoded_data)
     image = Image.open(BytesIO(image_data))
@@ -25,5 +25,23 @@ def getProducts(request):
         if product:
             lst.append(product)
     product = lst[0]
+    id = request.POST.get('id')
+    change = False
+    cart = Cart.objects.get(_id=id)
+    cartList = cart.cartItems[:-1].split(',')
+    if cartList != ['']:
+        for i in range(len(cartList)):
+            itemId, qty = cartList[i].split(":")
+            if itemId == str(product._id):
+                cartList[i] = f"{itemId}:{int(qty)+1}" # add item
+                cart.cartItems = (",".join(cartList) + ",")
+                change=True
+    if not change:
+        if cartList == ['']:
+            cart.cartItems = f"{product._id}:1,"
+        else:
+            cartList.append(f"{product._id}:1")
+            cart.cartItems = (",".join(cartList) + ",")
+    cart.save()
     serializer = ProductSerializer(product, many=False)
     return Response(serializer.data)

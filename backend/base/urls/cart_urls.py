@@ -4,7 +4,6 @@ from base.views import cart_views as views
 
 urlpatterns = [
     path('', views.getCart, name="cart"),
-    path('update/', views.updateCart, name="cart_update"),
-    path('add/', views.addToCart, name="cart_add"),
     path('location/', views.getCoords, name='coords'),
+    path('update/', views.updateCoords, name='update-coords'),
 ]
