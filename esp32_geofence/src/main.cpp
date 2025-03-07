@@ -5,7 +5,7 @@
 #include "../include/wifi.hpp"
 #include "../include/gps.hpp"
 #include "../include/bluetooth.hpp"
-// #include "../include/LCD.hpp"
+
 // pins used in the project: 39, 16, 17
 constexpr int LED_PIN = 2;
 
@@ -13,10 +13,13 @@ constexpr int LED_PIN = 2;
 void bluetoothTask(void *pvParameters) {
     while (true) {
         // Only run Bluetooth scanning if GPS doesn't have a valid location
-        if (!gps::hasValidLocation()) {
+        if (!gps::hasValidLocation()) 
+        {
             bluetooth::setSleepMode(false);  // Ensure Bluetooth is active
             bluetooth::localLoop();
-        } else {
+        } 
+        else 
+        {
             // If GPS has valid location, put Bluetooth in sleep mode
             bluetooth::setSleepMode(true);
         }
@@ -40,12 +43,6 @@ void buzzerTask(void *pvParameters) {
     }
 }
 
-// void LCDTask(void *pvParameters) {
-//     while (true) {
-//         LCD::localLoop();
-//         vTaskDelay(10 / portTICK_PERIOD_MS);
-//     }
-// }
 
 // other task
 void otherTask(void *pvParameters) {
@@ -68,7 +65,6 @@ void setup()
     buzzer::localSetup();
     bluetooth::localSetup();
     gps::localSetup();
-    // LCD::localSetup();
 
     // buzzer task
     xTaskCreatePinnedToCore(
@@ -102,16 +98,6 @@ void setup()
         NULL,       // task handle
         1           // run on core 1
     );
-
-    // xTaskCreatePinnedtoCore(
-    //     LCDTask,    // task function
-    //     "LCD Task", // task name
-    //     10000,        // stack size
-    //     NULL,         // task parameters
-    //     1,            // priority
-    //     NULL,         // task handle
-    //     1             // run on core 1
-    // );
 
     // other task
     xTaskCreatePinnedToCore(

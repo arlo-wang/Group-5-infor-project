@@ -8,6 +8,7 @@
 // Serial port definitions
 #define GPSSerial Serial2
 #define DEBUGSerial Serial
+#define CART_ID "1"
 
 namespace gps {
     // GPS data structure
@@ -42,6 +43,9 @@ namespace gps {
         // Geofence status
         bool inside_geofence;       // Whether inside geofence
         float distance_to_center;   // Distance to center point (meters)
+        
+        // Accuracy radius
+        float accuracy_radius;  // estimated error radius (meters)
     };
 
     // Geofence configuration
@@ -54,17 +58,43 @@ namespace gps {
     };
 
     // Function declarations
-    void parseNMEA(String nmea, GPSData &gps);
-    void displayGPSInfo(const GPSData &gps);
-    float calculateDistance(float lat1, float lon1, float lat2, float lon2);
-    void checkGeofence(GPSData &gps, Geofence &fence);
-    void setGeofence(float lat, float lon, float radius, bool enabled);
-    bool isGeofenceAlarmTriggered();
-    void resetGeofenceAlarm();
-    bool hasValidLocation();
-    unsigned long getTimeSinceLastValidFix();
+    // Module initialization and main loop
+    void localSetup();
+    void localLoop();
+
+    // Create JSON string from GPS data and send to server
     String createGPSJson(const GPSData &gps);
     void sendGPSData(const String &json_data, const String &serverUrl);
+
+    // Parse NMEA sentence
+    void parseNMEA(String nmea, GPSData &gps);
+
+    // Display GPS information
+    void displayGPSInfo(const GPSData &gps);
+
+    // Calculate distance between two points
+    float calculateDistance(float lat1, float lon1, float lat2, float lon2);
+
+    // Check if within geofence
+    void checkGeofence(GPSData &gps, Geofence &fence);
+
+    // Set geofence
+    void setGeofence(float lat, float lon, float radius, bool enabled);
+
+    // Check if geofence alarm is triggered
+    bool isGeofenceAlarmTriggered();
+
+    // Reset geofence alarm to false
+    void resetGeofenceAlarm();
+
+    // Check if valid location is available
+    bool hasValidLocation();
+
+    // Get time since last valid fix
+    unsigned long getTimeSinceLastValidFix();
+
+    // Calculate and return current accuracy radius (meters)
+    float getAccuracyRadius();
 
     extern const char* serverUrl;
 
@@ -74,7 +104,5 @@ namespace gps {
     extern GPSData gps;
     extern Geofence geofence;
 
-    // Module initialization and main loop
-    void localSetup();
-    void localLoop();
+
 } // namespace gps

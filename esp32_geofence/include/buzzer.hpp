@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "../include/gps.hpp"
 
-#define BUZZER_PIN 39  // Buzzer pin
+#define BUZZER_PIN 39  // Buzzer pin (connet this pin to the middle pin of the buzzer)
 #define LEDC_CHANNEL 0 // LEDC channel to use
 #define LEDC_TIMER 0   // LEDC timer to use
 #define LEDC_RESOLUTION 8 // LEDC resolution (8-bit: 0-255)
@@ -13,7 +13,6 @@ namespace buzzer {
     enum BuzzerState {
         IDLE,
         ALARM,
-        // Other alarm states...
     };
     
     // External declarations

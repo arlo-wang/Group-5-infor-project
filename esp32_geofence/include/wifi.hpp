@@ -5,10 +5,10 @@
 
 namespace wifi {
     // WiFi settings
-    // const char* ssid = "VM5892311";
-    // const char* password = "q6hQzcdmjqwq"; 
-    const char* ssid = "Arlo";
-    const char* password = "arloissmart"; 
+    const char* ssid = "VM5892311";
+    const char* password = "q6hQzcdmjqwq"; 
+    // const char* ssid = "Arlo";
+    // const char* password = "arloissmart"; 
 
     void localSetup()
     {

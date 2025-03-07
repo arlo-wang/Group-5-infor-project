@@ -13,12 +13,13 @@ namespace gps {
         99.9,                     // HDOP (invalid value)
         0, 0,                     // Last update, last valid fix
         true,                     // Inside geofence (default to true)
-        0.0                       // Distance to center
+        0.0,                      // Distance to center
+        0.0                       // Accuracy radius
     };
     
     // Geofence settings initialisation
     Geofence geofence = {
-        51.5074, -0.1278,  // Default center point (London)
+        51.494476, -0.194417,
         100.0,             // Default radius 100 meters
         false,             // Disabled by default
         false              // Alarm not triggered
@@ -26,13 +27,129 @@ namespace gps {
 
     // variable to track last update time
     unsigned long last_gps_update = 0;
-    // define update interval as 2000 milliseconds (2 seconds)
-    const unsigned long GPS_UPDATE_INTERVAL = 2000;
+    // define update interval as 5 seconds
+    const unsigned long GPS_UPDATE_INTERVAL = 5000;
     // define GPS signal timeout (10 seconds)
     const unsigned long GPS_SIGNAL_TIMEOUT = 10000;
 
     // define server URL
     const char* serverUrl = "http://3.8.78.228:8000/api/cart/update/"; 
+
+    // Create JSON string from GPS data
+    String createGPSJson(const GPSData &gps) {
+        JsonDocument doc;
+
+        doc["id"]  = CART_ID;  
+        doc["lat"] = gps.latitude;  
+        doc["lng"] = gps.longitude;
+        doc["radius"] = gps.accuracy_radius;  
+
+        String jsonString;
+        serializeJson(doc, jsonString);
+        return jsonString;
+    }
+
+    // send GPS data to server 
+    void sendGPSDataToServer(const String &jsonData, const String &serverUrl) {
+        HTTPClient http;
+        http.begin(serverUrl);
+        http.addHeader("Content-Type", "application/json");
+        
+        int httpCode = http.POST(jsonData);
+        
+        // print HTTP response code
+        if (httpCode > 0) DEBUGSerial.printf("HTTP:%d\n", httpCode);
+        // print error message
+        else DEBUGSerial.printf("ERR:%d\n", httpCode);
+
+        http.end(); // end HTTP connection
+    }
+
+    // GPS module initialisation
+    void localSetup() {
+        GPSSerial.begin(115200, SERIAL_8N1, 16, 17);   // RX : 16, TX : 17
+        DEBUGSerial.println("GPS Module Test");
+        DEBUGSerial.println("Waiting for GPS data...");
+        // enable geofence
+        setGeofence(geofence.center_latitude, geofence.center_longitude, geofence.radius, true);
+    }
+
+    // GPS data reading and parsing
+    void localLoop() {
+        // a static variable to track the previous location valid status
+        static bool previous_location_valid = false;
+        
+        while (GPSSerial.available()) {
+            char c = GPSSerial.read();
+            gps.last_update = millis();  // Update last data time
+            
+            // Collect NMEA sentence
+            if (c == '$') nmea_sentence = ""; // start of new NMEA sentence
+            
+            nmea_sentence += c;
+            
+            // End of NMEA sentence
+            if (c == '\n') {
+                // Print the complete NMEA sentence
+                // DEBUGSerial.print(nmea_sentence);  
+                // Parse the NMEA sentence
+                parseNMEA(nmea_sentence, gps);
+                // Check geofence status
+                checkGeofence(gps, geofence);
+                
+                // Update last valid fix time if location is valid
+                if (gps.location_valid) {
+                    gps.last_valid_fix = millis();
+                }
+                
+                new_data = true;
+            }
+        }
+        
+        // Check for GPS signal timeout
+        if (gps.location_valid && gps.last_valid_fix > 0) {
+            unsigned long time_since_last_fix = millis() - gps.last_valid_fix;
+            if (time_since_last_fix > GPS_SIGNAL_TIMEOUT) {
+                // Mark location as invalid if timeout exceeded
+                gps.location_valid = false;
+                DEBUGSerial.println("GPS signal lost: No valid data received for over 10 seconds");
+            }
+        }
+        
+        // detect GPS signal recovery
+        if (gps.location_valid && !previous_location_valid) {
+            DEBUGSerial.println("GPS signal recovered - checking geofence status");
+            checkGeofence(gps, geofence);
+        }
+        
+        // 更新上一次的位置有效状态
+        previous_location_valid = gps.location_valid;
+        
+        // only update GPS data if the specified time interval has passed
+        if (millis() - last_gps_update >= GPS_UPDATE_INTERVAL) {
+            // Always display GPS info, regardless of validity
+            // This will show "INVALID" status when location is not valid
+            displayGPSInfo(gps);
+            
+            // Check geofence only if location is valid
+            if (gps.location_valid) {
+                checkGeofence(gps, geofence);
+            }
+            
+            // send GPS data to server
+            if (gps.location_valid) {
+                // create JSON data
+                String jsonData = createGPSJson(gps);
+                DEBUGSerial.println("Sending GPS data: " + jsonData);
+                
+                // send to server
+                sendGPSDataToServer(jsonData, serverUrl);
+            }
+            
+            // update last update time
+            last_gps_update = millis();
+        }
+    }
 
     // Calculate distance between two points (meters) using Haversine formula
     float calculateDistance(float lat1, float lon1, float lat2, float lon2) {
@@ -53,7 +170,8 @@ namespace gps {
 
     // Check if within geofence
     void checkGeofence(GPSData &gps, Geofence &fence) {
-        if (!fence.enabled || !gps.location_valid) {
+        if (!fence.enabled || !gps.location_valid) 
+        {
             return; // Skip check if geofence is disabled or position is invalid
         }
         
@@ -73,6 +191,14 @@ namespace gps {
         if (was_inside && !gps.inside_geofence) {
             fence.alarm_triggered = true;
             DEBUGSerial.println("!!! GEOFENCE ALARM: Device has left the geofence area !!!");
+        }
+        // Reset alarm if moved from outside to inside or if signal just recovered and inside
+        else if ((!was_inside && gps.inside_geofence) || gps.inside_geofence) {
+            // if device moved from outside to inside, or signal just recovered and inside, reset alarm
+            if (fence.alarm_triggered) {
+                DEBUGSerial.println("Device is back inside geofence area - resetting alarm");
+                fence.alarm_triggered = false;
+            }
         }
     }
 
@@ -154,7 +280,14 @@ namespace gps {
             // Extract HDOP
             int comma9 = nmea.indexOf(',', comma8+1);
             String hdop_str = nmea.substring(comma8+1, comma9);
-            if (hdop_str.length() > 0) gps.hdop = hdop_str.toFloat();
+            // If HDOP is available, calculate accuracy radius
+            if (hdop_str.length() > 0) {
+                gps.hdop = hdop_str.toFloat();
+                // Calculate accuracy radius - based on HDOP value
+                // Typical GPS receiver basic accuracy is about 2.5 meters
+                const float BASE_ACCURACY = 2.5;  // meters
+                gps.accuracy_radius = gps.hdop * BASE_ACCURACY;
+            }
             
             // Extract altitude
             int comma10 = nmea.indexOf(',', comma9+1);
@@ -242,32 +375,50 @@ namespace gps {
             DEBUGSerial.print(", ");
             DEBUGSerial.println(gps.longitude, 6);
             
-            DEBUGSerial.print("Altitude: ");
-            DEBUGSerial.print(gps.altitude);
-            DEBUGSerial.println(" m");
+            // DEBUGSerial.print("Altitude: ");
+            // DEBUGSerial.print(gps.altitude);
+            // DEBUGSerial.println(" m");
             
-            DEBUGSerial.print("Speed: ");
-            DEBUGSerial.print(gps.speed);
-            DEBUGSerial.println(" knots");
+            // DEBUGSerial.print("Speed: ");
+            // DEBUGSerial.print(gps.speed);
+            // DEBUGSerial.println(" knots");
             
-            DEBUGSerial.print("Course: ");
-            DEBUGSerial.print(gps.course);
-            DEBUGSerial.println(" degrees");
+            // DEBUGSerial.print("Course: ");
+            // DEBUGSerial.print(gps.course);
+            // DEBUGSerial.println(" degrees");
             
-            if (gps.year > 0) {
-                DEBUGSerial.printf("Date/Time: %02d/%02d/%04d %02d:%02d:%02d\n", 
-                    gps.day, gps.month, gps.year, gps.hour, gps.minute, gps.second);
-            }
+            // if (gps.year > 0) {
+            //     DEBUGSerial.printf("Date/Time: %02d/%02d/%04d %02d:%02d:%02d\n", 
+            //         gps.day, gps.month, gps.year, gps.hour, gps.minute, gps.second);
+            // }
             
             // Add geofence information
             if (geofence.enabled) {
-                DEBUGSerial.print("Geofence: ");
-                DEBUGSerial.println(gps.inside_geofence ? "INSIDE" : "OUTSIDE");
-                DEBUGSerial.print("Distance to center: ");
-                DEBUGSerial.print(gps.distance_to_center);
-                DEBUGSerial.println(" meters");
+                // DEBUGSerial.println("\n--- Geofence Details ---");
+                // DEBUGSerial.print("Status: ");
+                // DEBUGSerial.println(gps.inside_geofence ? "INSIDE ✓" : "OUTSIDE ✗");
+                
+                // DEBUGSerial.print("Distance to center: ");
+                // DEBUGSerial.print(gps.distance_to_center);
+                // DEBUGSerial.print(" / ");
+                // DEBUGSerial.print(geofence.radius);
+                // DEBUGSerial.println(" meters");
+                
+                if (gps.inside_geofence) {
+                    DEBUGSerial.print("Margin: ");
+                    DEBUGSerial.print(geofence.radius - gps.distance_to_center);
+                    DEBUGSerial.println(" meters from boundary");
+                } else {
+                    DEBUGSerial.print("Distance beyond boundary: ");
+                    DEBUGSerial.print(gps.distance_to_center - geofence.radius);
+                    DEBUGSerial.println(" meters");
+                }
+                
+                DEBUGSerial.print("Alarm status: ");
+                DEBUGSerial.println(geofence.alarm_triggered ? "TRIGGERED" : "NOT TRIGGERED");
             }
         } 
+
         // if the location is not valid
         else {
             DEBUGSerial.println("INVALID - NO SIGNAL");
@@ -292,121 +443,25 @@ namespace gps {
             }
         }
         
-        DEBUGSerial.print("Satellites visible: ");
-        DEBUGSerial.println(gps.satellites_visible);
+        // DEBUGSerial.print("Satellites visible: ");
+        // DEBUGSerial.println(gps.satellites_visible);
         
-        DEBUGSerial.print("Fix quality: ");
-        DEBUGSerial.println(gps.fix_quality);
+        // DEBUGSerial.print("Fix quality: ");
+        // DEBUGSerial.println(gps.fix_quality);
         
-        DEBUGSerial.print("HDOP: ");
-        DEBUGSerial.println(gps.hdop);
+        // DEBUGSerial.print("HDOP: ");
+        // DEBUGSerial.println(gps.hdop);
         
         DEBUGSerial.println("----------------------");
     }
 
-    // GPS module initialisation
-    void localSetup() {
-        GPSSerial.begin(115200, SERIAL_8N1, 16, 17);   // RX : 16, TX : 17
-        DEBUGSerial.println("GPS Module Test");
-        DEBUGSerial.println("Waiting for GPS data...");
-    }
-
-    // Create JSON string from GPS data
-    String createGPSJson(const GPSData &gps) {
-        // reduce JSON document size
-        StaticJsonDocument<256> doc;  // reduce from 512 to 256
-
-        // only include the most important data
-        doc["lat"] = gps.latitude;    // shorten key name
-        doc["lng"] = gps.longitude;
-
-        // TODO: add radius
-        // doc["radius"] = 
-
-        String jsonString;
-        serializeJson(doc, jsonString);
-        return jsonString;
-    }
-
-    // send GPS data to server 
-    void sendGPSDataToServer(const String &jsonData, const String &serverUrl) {
-        HTTPClient http;
-        http.begin(serverUrl);
-        http.addHeader("Content-Type", "application/json");
-        
-        int httpCode = http.POST(jsonData);
-        if (httpCode > 0) {
-            DEBUGSerial.printf("HTTP:%d\n", httpCode);
-        } else {
-            DEBUGSerial.printf("ERR:%d\n", httpCode);
-        }
-        http.end();
-    }
-
-    // GPS data reading and parsing
-    void localLoop() {
-
-        while (GPSSerial.available()) {
-            char c = GPSSerial.read();
-            gps.last_update = millis();  // Update last data time
-            
-            // Collect NMEA sentence
-            if (c == '$') nmea_sentence = ""; // start of new NMEA sentence
-            
-            nmea_sentence += c;
-            
-            // End of NMEA sentence
-            if (c == '\n') {
-                // Print the complete NMEA sentence
-                // DEBUGSerial.print(nmea_sentence);  
-                // Parse the NMEA sentence
-                parseNMEA(nmea_sentence, gps);
-                // Check geofence status
-                checkGeofence(gps, geofence);
-                
-                // Update last valid fix time if location is valid
-                if (gps.location_valid) {
-                    gps.last_valid_fix = millis();
-                }
-                
-                new_data = true;
-            }
+    float getAccuracyRadius() {
+        // If location is invalid, return a large value to indicate high uncertainty
+        if (!gps.location_valid) {
+            return 9999.0;  // indicate high uncertainty when location is invalid
         }
         
-        // Check for GPS signal timeout
-        if (gps.location_valid && gps.last_valid_fix > 0) {
-            unsigned long time_since_last_fix = millis() - gps.last_valid_fix;
-            if (time_since_last_fix > GPS_SIGNAL_TIMEOUT) {
-                // Mark location as invalid if timeout exceeded
-                gps.location_valid = false;
-                DEBUGSerial.println("GPS signal lost: No valid data received for over 10 seconds");
-            }
-        }
-        
-        // only update GPS data if the specified time interval has passed
-        if (millis() - last_gps_update >= GPS_UPDATE_INTERVAL) {
-            // Always display GPS info, regardless of validity
-            // This will show "INVALID" status when location is not valid
-            displayGPSInfo(gps);
-            
-            // Check geofence only if location is valid
-            if (gps.location_valid) {
-                checkGeofence(gps, geofence);
-            }
-            
-            // send GPS data to server
-            if (gps.location_valid) {
-                // create JSON data
-                String jsonData = createGPSJson(gps);
-                DEBUGSerial.println("Sending GPS data: " + jsonData);
-                
-                // send to server
-                sendGPSDataToServer(jsonData, serverUrl);
-            }
-            
-            // update last update time
-            last_gps_update = millis();
-        }
+        return gps.accuracy_radius;
     }
 
 } // namespace gps 
