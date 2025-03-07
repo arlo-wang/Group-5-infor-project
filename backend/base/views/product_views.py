@@ -9,39 +9,46 @@ from base.serializer import ProductSerializer
 import urllib.parse
 import base64
 from PIL import Image
-from io import BytesIO
 from pyzbar.pyzbar import decode
+import os
 
 @api_view(['POST'])
 def getProducts(request):
     data = request.POST.get('image')
     url_decoded_data = urllib.parse.unquote(data)
     image_data = base64.b64decode(url_decoded_data)
-    image = Image.open(BytesIO(image_data))
+    if os.path.exists("image.jpg"):
+        os.remove("image.jpg")
+    with open("image.jpg", 'wb') as image_file:
+        image_file.write(image_data)
+    image = Image.open("image.jpg")
     decoded_objects = decode(image)
     lst = []
     for obj in decoded_objects:
         product = Product.objects.filter(barcode=obj.data.decode('utf-8')).first()
         if product:
             lst.append(product)
-    product = lst[0]
-    id = request.POST.get('id')
-    change = False
-    cart = Cart.objects.get(_id=id)
-    cartList = cart.cartItems[:-1].split(',')
-    if cartList != ['']:
-        for i in range(len(cartList)):
-            itemId, qty = cartList[i].split(":")
-            if itemId == str(product._id):
-                cartList[i] = f"{itemId}:{int(qty)+1}" # add item
+    if len(lst):
+        product = lst[0]
+        id = request.POST.get('id')
+        change = False
+        cart = Cart.objects.get(_id=id)
+        cartList = cart.cartItems[:-1].split(',')
+        if cartList != ['']:
+            for i in range(len(cartList)):
+                itemId, qty = cartList[i].split(":")
+                if itemId == str(product._id):
+                    cartList[i] = f"{itemId}:{int(qty)+1}" # add item
+                    cart.cartItems = (",".join(cartList) + ",")
+                    change=True
+        if not change:
+            if cartList == ['']:
+                cart.cartItems = f"{product._id}:1,"
+            else:
+                cartList.append(f"{product._id}:1")
                 cart.cartItems = (",".join(cartList) + ",")
-                change=True
-    if not change:
-        if cartList == ['']:
-            cart.cartItems = f"{product._id}:1,"
-        else:
-            cartList.append(f"{product._id}:1")
-            cart.cartItems = (",".join(cartList) + ",")
-    cart.save()
-    serializer = ProductSerializer(product, many=False)
-    return Response(serializer.data)
+        cart.save()
+        serializer = ProductSerializer(product, many=False)
+        return Response(serializer.data)
+    else:
+        return Response("hi", status=300)
