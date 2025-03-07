@@ -32,7 +32,7 @@ namespace gps {
     const unsigned long GPS_SIGNAL_TIMEOUT = 10000;
 
     // define server URL
-    const char* serverUrl = "http://........"; 
+    const char* serverUrl = "http://3.8.78.228:8000/api/cart/update/"; 
 
     // Calculate distance between two points (meters) using Haversine formula
     float calculateDistance(float lat1, float lon1, float lat2, float lon2) {
@@ -318,17 +318,10 @@ namespace gps {
 
         // only include the most important data
         doc["lat"] = gps.latitude;    // shorten key name
-        doc["lon"] = gps.longitude;
-        doc["alt"] = gps.altitude;
-        doc["spd"] = gps.speed;
-        doc["sat"] = gps.satellites_visible;
-        doc["fix"] = gps.fix_quality;
+        doc["lng"] = gps.longitude;
 
-        char timeStr[16];
-        sprintf(timeStr, "%02d%02d%02d%02d%02d%02d",
-                gps.year % 100, gps.month, gps.day,
-                gps.hour, gps.minute, gps.second);
-        doc["time"] = timeStr;
+        // TODO: add radius
+        // doc["radius"] = 
 
         String jsonString;
         serializeJson(doc, jsonString);
