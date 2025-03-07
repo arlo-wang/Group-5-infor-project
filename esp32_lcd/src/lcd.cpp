@@ -1,4 +1,5 @@
 #include "lcd.hpp"
+#include <unordered_map>
 
 // WiFi connection information
 const char* ssid = "CM";
@@ -11,26 +12,41 @@ const int serverPort = 12000;
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 WiFiServer server(serverPort);
 
+// Store color mapping table in PROGMEM to save RAM
+// Use unordered_map to improve lookup efficiency
+const std::map<String, uint16_t> colorMap = {
+    {"red",     ST77XX_RED},
+    {"blue",    ST77XX_BLUE},
+    {"green",   ST77XX_GREEN},
+    {"white",   ST77XX_WHITE},
+    {"black",   ST77XX_BLACK},
+    {"yellow",  ST77XX_YELLOW},
+    {"orange",  ST77XX_ORANGE},
+    {"magenta", ST77XX_MAGENTA},
+    {"cyan",    ST77XX_CYAN}
+};
+
 void setupDisplayServer() {
     // Initialize serial communication
     Serial.begin(115200);
     
     // Connect to WiFi
-    Serial.println("Connecting to WiFi...");
+    Serial.println(F("Connecting to WiFi..."));
+    
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
-        Serial.println("Connecting...");
+        Serial.println(F("Connecting..."));
     }
     
     // Print IP address after successful WiFi connection
-    Serial.println("Connected to WiFi!");
-    Serial.print("IP Address: ");
+    Serial.println(F("Connected to WiFi!"));
+    Serial.print(F("IP Address: "));
     Serial.println(WiFi.localIP());
     
     // Start server
     server.begin();
-    Serial.println("Server running on port 12000");
+    Serial.println(F("Server running on port 12000"));
 
     // Initialize display
     tft.initR(INITR_BLACKTAB);
@@ -46,241 +62,151 @@ void setupDisplayServer() {
 void loopDisplayServer() {
     // Check if a client has connected
     WiFiClient client = server.available();
-    if (client) {
-        Serial.println("Client connected");
+    if (client) 
+    {
+        Serial.println(F("Client connected"));
         
-        // Receive data from client
-        String message = "";
-        while (client.available()) {
-            char c = client.read();
-            message += c;
-        }
-        Serial.print("Message received:");
+        // Use a fixed-size buffer to receive data, avoiding dynamic memory allocation
+        char buffer[128] = {0};
+        size_t length = client.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
+        buffer[length] = '\0';
+        
+        String message(buffer);
+        Serial.print(F("Message received:"));
         Serial.println(message);
         
         // If no space, print directly, otherwise call parse function
         int index = message.indexOf(" ");
-        if (index == -1) {
+        if (index == -1) 
+        {
             tft.println(message);
-            message = "RECEIVED";
+            message = F("RECEIVED");
         }
-        else {
+        else 
+        {
             message = decode_msg(message.substring(0, index), message.substring(index + 1));
         }
         
         // Send response to client
         client.println(message);
         client.stop();
-        Serial.println("Client disconnected");
+        Serial.println(F("Client disconnected"));
     }
-    delay(1000);
+    delay(10); // Reduce delay time to improve response speed
 }
 
-String decode_msg(String Keywd, String Payload) {
-    if (Keywd == "Text_color") { // Set text color
-        if (Payload == "red") {
-            tft.setTextColor(ST77XX_RED);
-            return "Success";
+// Helper function for color setting
+bool setColor(const String& colorName, uint16_t& colorValue) 
+{
+    auto it = colorMap.find(colorName);
+    if (it != colorMap.end()) 
+    {
+        colorValue = it->second;
+        return true;
+    }
+    return false;
+}
+
+String decode_msg(String Keywd, String Payload) 
+{
+    // Handle text color setting
+    if (Keywd == "Text_color") 
+    {
+        uint16_t color;
+        if (setColor(Payload, color)) 
+        {
+            tft.setTextColor(color);
+            return F("Success");
         }
-        if (Payload == "blue") {
-            tft.setTextColor(ST77XX_BLUE);
-            return "Success";
-        }
-        if (Payload == "green") {
-            tft.setTextColor(ST77XX_GREEN);
-            return "Success";
-        }
-        if (Payload == "white") {
-            tft.setTextColor(ST77XX_WHITE);
-            return "Success";
-        }
-        if (Payload == "black") {
-            tft.setTextColor(ST77XX_BLACK);
-            return "Success";
-        }
-        if (Payload == "yellow") {
-            tft.setTextColor(ST77XX_YELLOW);
-            return "Success";
-        }
-        if (Payload == "orange") {
-            tft.setTextColor(ST77XX_ORANGE);
-            return "Success";
-        }
-        if (Payload == "magenta") {
-            tft.setTextColor(ST77XX_MAGENTA);
-            return "Success";
-        }
-        if (Payload == "cyan") {
-            tft.setTextColor(ST77XX_CYAN);
-            return "Success";
-        }
-        return "Invalid Color";
+        return F("Invalid Color");
     }
   
-    if (Keywd == "Fill_color") { // Set fill color and clear screen
-        if (Payload == "red") {
-            tft.fillScreen(ST77XX_RED);
-            return "Success";
+    // Handle fill color setting
+    if (Keywd == "Fill_color") 
+    {
+        uint16_t color;
+        if (setColor(Payload, color)) 
+        {
+            tft.fillScreen(color);
+            return F("Success");
         }
-        if (Payload == "blue") {
-            tft.fillScreen(ST77XX_BLUE);
-            return "Success";
-        }
-        if (Payload == "green") {
-            tft.fillScreen(ST77XX_GREEN);
-            return "Success";
-        }
-        if (Payload == "white") {
-            tft.fillScreen(ST77XX_WHITE);
-            return "Success";
-        }
-        if (Payload == "black") {
-            tft.fillScreen(ST77XX_BLACK);
-            return "Success";
-        }
-        if (Payload == "yellow") {
-            tft.fillScreen(ST77XX_YELLOW);
-            return "Success";
-        }
-        if (Payload == "orange") {
-            tft.fillScreen(ST77XX_ORANGE);
-            return "Success";
-        }
-        if (Payload == "magenta") {
-            tft.fillScreen(ST77XX_MAGENTA);
-            return "Success";
-        }
-        if (Payload == "cyan") {
-            tft.fillScreen(ST77XX_CYAN);
-            return "Success";
-        }
-        return "Invalid Color";
+        return F("Invalid Color");
     }
   
-    if (Keywd == "Rotation") { // Set screen rotation
-        if (Payload == "0") {
-            tft.setRotation(0);
-            return "Success";
+    // Handle screen rotation
+    if (Keywd == "Rotation") 
+    {
+        int rotation = Payload.toInt();
+        if (rotation >= 0 && rotation <= 3) 
+        {
+            tft.setRotation(rotation);
+            return F("Success");
         }
-        if (Payload == "1") {
-            tft.setRotation(1);
-            return "Success";
-        }
-        if (Payload == "2") {
-            tft.setRotation(2);
-            return "Success";
-        }
-        if (Payload == "3") {
-            tft.setRotation(3);
-            return "Success";
-        }
+        return F("Invalid Rotation (0-3)");
     }
   
-    if (Keywd == "Cursor") { // Set text starting position (x, y coordinates)
-        int index_1 = Payload.indexOf(" ");
-        String x, y;
-        if (index_1 == -1) {
-            return "Too few arguments (Needs 1 more)";
+    // Handle cursor position setting
+    if (Keywd == "Cursor") 
+    {
+        int index = Payload.indexOf(" ");
+        if (index == -1) 
+        {
+            return F("Too few arguments (Needs 1 more)");
         }
-        else {
-            x = Payload.substring(0, index_1);
-        }
-        int index_2 = Payload.substring(index_1 + 1).indexOf(" ");
-        if (index_2 == -1) {
-            y = Payload.substring(index_1 + 1);
-            tft.setCursor(x.toInt(), y.toInt());
-            return "Success";
-        }
-        else {
-            return "Too many arguments";
-        }
-    }
-  
-    if (Keywd == "Rect") { // Draw rectangle (top-left x, top-left y, width, height, color)
-        String Params = Payload;
-        String p, q, r, s, t;
-        int index = Params.indexOf(" "); 
-        if (index == -1) {
-            return "Too few arguments (Needs 4 more)";
-        }
-        else {
-            p = Params.substring(0, index);
-            Params = Params.substring(index + 1);
-        }
-        index = Params.indexOf(" "); 
-        if (index == -1) {
-            return "Too few arguments (Needs 3 more)";
-        }
-        else {
-            q = Params.substring(0, index);
-            Params = Params.substring(index + 1);
-        }
-        index = Params.indexOf(" "); 
-        if (index == -1) {
-            return "Too few arguments (Needs 2 more)";
-        }
-        else {
-            r = Params.substring(0, index);
-            Params = Params.substring(index + 1);
-        }
-        index = Params.indexOf(" "); 
-        if (index == -1) {
-            return "Too few arguments (Needs 1 more)";
-        }
-        else {
-            s = Params.substring(0, index);
-            Params = Params.substring(index + 1);
-        }
-        index = Params.indexOf(" ");
-        if (index == -1) {
-            t = Params;
         
-            if (t == "red") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_RED);
-                return "Success";
-            }
-            if (t == "blue") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_BLUE);
-                return "Success";
-            }
-            if (t == "green") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_GREEN);
-                return "Success";
-            }
-            if (t == "white") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_WHITE);
-                return "Success";
-            }
-            if (t == "black") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_BLACK);
-                return "Success";
-            }
-            if (t == "yellow") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_YELLOW);
-                return "Success";
-            }
-            if (t == "orange") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_ORANGE);
-                return "Success";
-            }
-            if (t == "magenta") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_MAGENTA);
-                return "Success";
-            }
-            if (t == "cyan") {
-                tft.fillRect(p.toInt(), q.toInt(), r.toInt(), s.toInt(), ST77XX_CYAN);
-                return "Success";
-            }
-            return "Invalid Color";
+        int x = Payload.substring(0, index).toInt();
+        String yStr = Payload.substring(index + 1);
+        
+        if (yStr.indexOf(" ") != -1) 
+        {
+            return F("Too many arguments");
         }
-        else {
-            Serial.println(Payload);
-            return "Too many arguments";
+        
+        int y = yStr.toInt();
+        tft.setCursor(x, y);
+        return F("Success");
+    }
+  
+    // Handle rectangle drawing
+    if (Keywd == "Rect") 
+    {
+        // This part could be further optimized using StringView or similar techniques
+        int params[4]; // x, y, width, height
+        int paramCount = 0;
+        int startPos = 0;
+        int spacePos;
+        
+        // Parse the first four numeric parameters
+        while (paramCount < 4 && (spacePos = Payload.indexOf(' ', startPos)) != -1) 
+        {
+            params[paramCount++] = Payload.substring(startPos, spacePos).toInt();
+            startPos = spacePos + 1;
         }
+        
+        // Check parameter count
+        if (paramCount < 4) 
+        {
+            return F("Too few arguments");
+        }
+        
+        // Get color name
+        String colorName = Payload.substring(startPos);
+        if (colorName.indexOf(' ') != -1) 
+        {
+            return F("Too many arguments");
+        }
+        
+        // Set color and draw rectangle
+        uint16_t color;
+        if (setColor(colorName, color)) 
+        {
+            tft.fillRect(params[0], params[1], params[2], params[3], color);
+            return F("Success");
+        }
+        return F("Invalid Color");
     }
-    else { // If no specific keyword, print text directly
-        tft.println(Keywd + " " + Payload);
-        return "Success";
-    }
-    return "Failed";
+    
+    // If no matching keyword, print text directly
+    tft.println(Keywd + " " + Payload);
+    return F("Success");
 }
