@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from base.models import Cart, Scanner, Product
 from base.serializer import ScannerSerializer
 
-@api_view(['GET'])
+@api_view(['POST'])
 def getCart(request):
     response = 0
     id = request.data['id']
