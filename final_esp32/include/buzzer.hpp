@@ -8,9 +8,11 @@
 #define LEDC_TIMER 0   // LEDC timer to use
 #define LEDC_RESOLUTION 8 // LEDC resolution (8-bit: 0-255)
 
-namespace buzzer {
+namespace buzzer 
+{
     // Buzzer states
-    enum BuzzerState {
+    enum BuzzerState 
+    {
         IDLE,
         ALARM,
     };

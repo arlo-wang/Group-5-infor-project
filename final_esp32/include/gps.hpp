@@ -9,10 +9,14 @@
 #define GPSSerial Serial2
 #define DEBUGSerial Serial
 #define CART_ID "1"
+#define GPS_RX 41
+#define GPS_TX 42
 
-namespace gps {
+namespace gps 
+{
     // GPS data structure
-    struct GPSData {
+    struct GPSData 
+    {
         // Position data
         float latitude;
         float longitude;
@@ -49,7 +53,8 @@ namespace gps {
     };
 
     // Geofence configuration
-    struct Geofence {
+    struct Geofence 
+    {
         float center_latitude;    // Center point latitude
         float center_longitude;   // Center point longitude
         float radius;             // Geofence radius (meters)

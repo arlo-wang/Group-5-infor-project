@@ -5,9 +5,10 @@
 #include "../include/wifi.hpp"
 #include "../include/gps.hpp"
 #include "../include/bluetooth.hpp"
+#include "../include/camera.hpp"
 
 // pins used in the project: 39, 16, 17
-constexpr int LED_PIN = 2;
+// constexpr int LED_PIN = 2;
 
 // bluetooth task
 void bluetoothTask(void *pvParameters) {
@@ -43,27 +44,38 @@ void buzzerTask(void *pvParameters) {
     }
 }
 
-
-// other task
-void otherTask(void *pvParameters) {
+// camera task
+void cameraTask(void *pvParameters) {
     while (true) {
-        // LED keep on if buzzer is on
-        if (buzzer::current_state == buzzer::ALARM) digitalWrite(LED_PIN, HIGH);
-        else digitalWrite(LED_PIN, LOW);
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS); // delay to avoid task blocking
+        camera::localLoop();
+        vTaskDelay(10 / portTICK_PERIOD_MS); // delay to avoid task blocking
     }
 }
+
+// // other task
+// void otherTask(void *pvParameters) {
+//     while (true) {
+//         // LED keep on if buzzer is on
+//         if (buzzer::current_state == buzzer::ALARM) digitalWrite(LED_PIN, HIGH);
+//         else digitalWrite(LED_PIN, LOW);
+
+//         vTaskDelay(1000 / portTICK_PERIOD_MS); // delay to avoid task blocking
+//     }
+// }
 
 // setup function
 void setup() 
 {
     Serial.begin(115200);
-    pinMode(LED_PIN, OUTPUT);
+    delay(500);
+    // pinMode(LED_PIN, OUTPUT);
 
     wifi::localSetup();
+    delay(500);
     buzzer::localSetup();
+    delay(500);
     bluetooth::localSetup();
+    delay(500);
     gps::localSetup();
 
     // buzzer task
@@ -99,17 +111,27 @@ void setup()
         1           // run on core 1
     );
 
-    // other task
+    // camera task
     xTaskCreatePinnedToCore(
-        otherTask,    // task function
-        "Other Task", // task name
-        10000,        // stack size
-        NULL,         // task parameters
-        1,            // priority
-        NULL,         // task handle
-        1             // run on core 1
+        cameraTask,    // task function
+        "Camera Task", // task name
+        10000,         // stack size
+        NULL,          // task parameters
+        1,             // priority
+        NULL,          // task handle
+        1              // run on core 1
     );
-
+    
+    // // other task
+    // xTaskCreatePinnedToCore(
+    //     otherTask,    // task function
+    //     "Other Task", // task name
+    //     4096,        // stack size
+    //     NULL,         // task parameters
+    //     1,            // priority
+    //     NULL,         // task handle
+    //     1             // run on core 1
+    // );
     
 }
 

@@ -66,8 +66,11 @@ namespace gps {
     }
 
     // GPS module initialisation
-    void localSetup() {
-        GPSSerial.begin(115200, SERIAL_8N1, 16, 17);   // RX : 16, TX : 17
+    void localSetup() 
+    {
+        // RX : 41 (connect to gps Tx), TX : 42
+        // NOTE: 35, 36 cannot be used as UART pins
+        GPSSerial.begin(115200, SERIAL_8N1, GPS_RX, GPS_TX);   
         DEBUGSerial.println("GPS Module Test");
         DEBUGSerial.println("Waiting for GPS data...");
         // enable geofence

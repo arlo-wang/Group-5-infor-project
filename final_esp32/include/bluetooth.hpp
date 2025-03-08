@@ -10,9 +10,11 @@
 
 #define SCAN_TIME 5  // Scan duration in seconds
 
-namespace bluetooth {
+namespace bluetooth 
+{
     // Bluetooth scanning states 
-    enum BluetoothState {
+    enum BluetoothState 
+    {
         IDLE,           // Not scanning
         SCANNING,       // Currently scanning
         DEVICE_FOUND,   // Device found during scan
