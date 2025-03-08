@@ -4,9 +4,9 @@
 #define BUTTON_PIN  0
 
 #include "esp_camera.h"
-#include "../lib/camera_pins.h"
+#include "camera_pins.h"
 #include "../lib/ws2812.h"
-#include "../lib/Base64.h"
+#include "../lib/Base64.h" 
 #include <WiFi.h>
 #include <HTTPClient.h>
 

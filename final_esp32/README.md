@@ -2,7 +2,7 @@
 ## pins used so far: 
 
 - buzzer : 39
-- gps : UART2 (16, 17)
+- gps : UART2 (41, 42)
 
 ## NMEA 0183 Protocol
 
