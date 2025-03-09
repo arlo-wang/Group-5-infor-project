@@ -5,8 +5,8 @@
 
 #include "esp_camera.h"
 #include "camera_pins.h"
-#include "../lib/ws2812.h"
-#include "../lib/Base64.h" 
+#include "../src/ws2812.h"
+#include "../src/Base64.h" 
 #include <WiFi.h>
 #include <HTTPClient.h>
 
