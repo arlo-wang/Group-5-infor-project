@@ -38,7 +38,7 @@ def updateCoords(request):
     except Exception as e:
         return Response(str(e), status=400)
     
-@api_view(['GET'])
+@api_view(['POST'])
 def getLatestTrade(request):
     id = request.data['id']
     cart = Cart.objects.get(_id=id)
