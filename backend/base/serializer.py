@@ -21,7 +21,7 @@ class ScannerSerializer(serializers.ModelSerializer):
     
     def get_radius(self, obj):
         location = obj.location.split(',')
-        return int(location[2])
+        return float(location[2])
 
 class CartSerializer(serializers.ModelSerializer):
     class Meta:

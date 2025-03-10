@@ -10,7 +10,7 @@ import urllib.parse
 import base64
 from PIL import Image
 from pyzbar.pyzbar import decode
-import os
+import os, uuid
 
 @api_view(['POST'])
 def getProducts(request):
@@ -47,6 +47,8 @@ def getProducts(request):
             else:
                 cartList.append(f"{product._id}:1")
                 cart.cartItems = (",".join(cartList) + ",")
+        cart.latestTrade = str(uuid.uuid4())
+        cart.latestTradeAmount = product.price
         cart.save()
         serializer = ProductSerializer(product, many=False)
         return Response(serializer.data)

@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
 from base.models import Cart, Scanner, Product
-from base.serializer import ScannerSerializer
+from base.serializer import ScannerSerializer, CartSerializer
 
 @api_view(['POST'])
 def getCart(request):
@@ -37,3 +37,10 @@ def updateCoords(request):
         return Response("Successful", status=200)
     except Exception as e:
         return Response(str(e), status=400)
+    
+@api_view(['GET'])
+def getLatestTrade(request):
+    id = request.data['id']
+    cart = Cart.objects.get(_id=id)
+    serializer = CartSerializer(cart, many=False)
+    return Response(serializer.data)

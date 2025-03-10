@@ -6,4 +6,5 @@ urlpatterns = [
     path('', views.getCart, name="cart"),
     path('location/', views.getCoords, name='coords'),
     path('update/', views.updateCoords, name='update-coords'),
+    path('latest/', views.getLatestTrade, name='latest'),
 ]
