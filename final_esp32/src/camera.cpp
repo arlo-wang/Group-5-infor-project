@@ -2,7 +2,7 @@
 
 namespace camera 
 {
-    const char* server = "http://192.168.0.25:8000/api/products/";
+    const char* server = "http://3.8.78.228:8000/api/products/";
 
 
     String urlencode(String str)
@@ -60,18 +60,18 @@ namespace camera
     // camera loop
     void localLoop() 
     {
-        Serial.println("Camera loop");
+        // Serial.println("Camera loop");
         // if button is pressed
         if(digitalRead(BUTTON_PIN) == LOW)
         {
             delay(100);
-            Serial.println("Button pressed");
-            // if button is still pressed, set color to yellow
+            
             if(digitalRead(BUTTON_PIN) == LOW)
             {
                 Serial.println("Button still pressed");
+
                 ws2812SetColor(3);
-                Serial.println("color set to yellow");
+
                 // wait for button to be released
                 while(digitalRead(BUTTON_PIN) == LOW);
                 Serial.println("Button released");
@@ -104,6 +104,17 @@ namespace camera
                     HTTPClient http;
                     http.begin(client, server);
 
+                    bool beginSuccess = http.begin(client, server);
+                    
+                    if (!beginSuccess) 
+                    {
+                        Serial.println("HTTP Begin failed! Unable to connect to server.");
+                    } 
+                    else 
+                    {
+                        Serial.println("HTTP Begin successful. Connection established.");
+                    }
+
                     // add header to request
                     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -117,7 +128,6 @@ namespace camera
                     Serial.println(httpResponseCode);
                     
                     http.end();
-                    Serial.println("Image sent to server");
                 }
 
                 esp_camera_fb_return(fb);

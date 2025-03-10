@@ -19,7 +19,7 @@ namespace gps {
     
     // Geofence settings initialisation
     Geofence geofence = {
-        51.494476, -0.194417,
+        51.499218, -0.175257,
         100.0,             // Default radius 100 meters
         false,             // Disabled by default
         false              // Alarm not triggered

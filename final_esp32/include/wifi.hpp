@@ -13,7 +13,6 @@ namespace wifi {
     void localSetup()
     {
         // connect to WiFi
-        // Serial.printf("Connecting to %s ", ssid);
         WiFi.begin(ssid, password);
 
         // wait for WiFi connection

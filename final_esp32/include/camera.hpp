@@ -9,6 +9,7 @@
 #include "../src/Base64.h" 
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClient.h>
 
 namespace camera 
 {
