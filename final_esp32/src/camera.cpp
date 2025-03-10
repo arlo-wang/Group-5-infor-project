@@ -1,51 +1,25 @@
 #include "../include/camera.hpp"
 
 namespace camera 
-{
+{   
+    // Global flag set by the interrupt when a trigger is received
+    volatile bool triggerReceived = false;
+    
     const char* server = "http://3.8.78.228:8000/api/products/";
 
-
-    String urlencode(String str)
+    void IRAM_ATTR onFPGATrigger() 
     {
-        String encodedString="";
-        char c;
-        char code0;
-        char code1;
-        for (int i = 0; i < str.length(); i++)
-        {
-            c = str.charAt(i);
-            if (c == ' ')
-            {
-                encodedString += '+';
-            } 
-            else if (isalnum(c))
-            {
-                encodedString += c;
-            } 
-            else 
-            {
-                code1 = (c & 0xf) + '0';
-                if ((c & 0xf) > 9){
-                    code1 = (c & 0xf) - 10 + 'A';
-                }
-                c = (c >> 4) & 0xf;
-                code0 = c + '0';
-                if (c > 9){
-                    code0 = c - 10 + 'A';
-                }
-                encodedString += '%';
-                encodedString += code0;
-                encodedString += code1;
-            }
-            yield();
-        }
-        return encodedString;
+        triggerReceived = true;
+    }
+
+    void resetTrigger() 
+    {
+        triggerReceived = false;
     }
 
     // camera setup
     void localSetup() 
     {
-        pinMode(BUTTON_PIN, INPUT_PULLUP);
         
         // initialize ws2812
         ws2812Init();
@@ -55,84 +29,82 @@ namespace camera
 
         // else set color to red if camera init failed
         else ws2812SetColor(1);
+
+        // Set the trigger pin as input with internal pull-down resistor
+        pinMode(FPGA_TRIGGER_PIN, INPUT_PULLUP);
+  
+        // Attach an interrupt on the trigger pin for a rising edge
+        attachInterrupt(digitalPinToInterrupt(FPGA_TRIGGER_PIN), onFPGATrigger, RISING);
     }
 
     // camera loop
     void localLoop() 
     {
-        // Serial.println("Camera loop");
-        // if button is pressed
-        if(digitalRead(BUTTON_PIN) == LOW)
+        if(triggerReceived)
         {
-            delay(100);
-            
-            if(digitalRead(BUTTON_PIN) == LOW)
+            Serial.println("FPGA trigger received!");
+
+            ws2812SetColor(3);
+
+            // get image from camera
+            camera_fb_t * fb = NULL;
+            fb = esp_camera_fb_get();
+            Serial.println("Image captured");
+
+            // if image capture failed, print error message
+            if(!fb) Serial.println("Camera capture failed");
+
+            // if image capture success, send image to server
+            else 
             {
-                Serial.println("Button still pressed");
-
-                ws2812SetColor(3);
-
-                // wait for button to be released
-                while(digitalRead(BUTTON_PIN) == LOW);
-                Serial.println("Button released");
-                // get image from camera
-                camera_fb_t * fb = NULL;
-                fb = esp_camera_fb_get();
-                Serial.println("Image captured");
-
-                // if image capture failed, print error message
-                if(!fb) Serial.println("Camera capture failed");
-
-                // if image capture success, send image to server
-                else 
+                // get image buffer
+                char *input = (char *)fb->buf;
+                char output[base64_enc_len(3)];
+                String imageFile = "";
+                
+                Serial.println("Encoding image to base64");
+                // encode image to base64
+                for (int i=0; i<fb->len; i++) 
                 {
-                    // get image buffer
-                    char *input = (char *)fb->buf;
-                    char output[base64_enc_len(3)];
-                    String imageFile = "";
-                    
-                    Serial.println("Encoding image to base64");
-                    // encode image to base64
-                    for (int i=0; i<fb->len; i++) 
-                    {
-                        base64_encode(output, (input++), 3);
-                        if (i%3 == 0) imageFile += urlencode(String(output));
-                    }
-
-                    // send image to server
-                    WiFiClient client;
-                    HTTPClient http;
-                    http.begin(client, server);
-
-                    bool beginSuccess = http.begin(client, server);
-                    
-                    if (!beginSuccess) 
-                    {
-                        Serial.println("HTTP Begin failed! Unable to connect to server.");
-                    } 
-                    else 
-                    {
-                        Serial.println("HTTP Begin successful. Connection established.");
-                    }
-
-                    // add header to request
-                    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-                    // print the size of the image
-                    Serial.print("Image data size: ");
-                    Serial.println(imageFile.length());
-
-                    // send image to server
-                    int httpResponseCode = http.POST("image=" + imageFile + "&id=1");
-                    Serial.print("Camera HTTP Response code: ");
-                    Serial.println(httpResponseCode);
-                    
-                    http.end();
+                    base64_encode(output, (input++), 3);
+                    if (i%3 == 0) imageFile += urlencode(String(output));
                 }
 
-                esp_camera_fb_return(fb);
-                ws2812SetColor(2);
+                // send image to server
+                WiFiClient client;
+                HTTPClient http;
+                http.begin(client, server);
+
+                bool beginSuccess = http.begin(client, server);
+                
+                if (!beginSuccess) 
+                {
+                    Serial.println("HTTP Begin failed! Unable to connect to server.");
+                } 
+                else 
+                {
+                    Serial.println("HTTP Begin successful. Connection established.");
+                }
+
+                // add header to request
+                http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+                // print the size of the image
+                Serial.print("Image data size: ");
+                Serial.println(imageFile.length());
+
+                // send image to server
+                int httpResponseCode = http.POST("image=" + imageFile + "&id=1");
+                Serial.print("Camera HTTP Response code: ");
+                Serial.println(httpResponseCode);
+                
+                http.end();
             }
+
+            esp_camera_fb_return(fb);
+            ws2812SetColor(2);
+            resetTrigger();
+        
         }
     }
 
@@ -199,6 +171,43 @@ namespace camera
 
         Serial.println("Camera configuration complete!");
         return 1;
+    }
+
+    String urlencode(String str)
+    {
+        String encodedString="";
+        char c;
+        char code0;
+        char code1;
+        for (int i = 0; i < str.length(); i++)
+        {
+            c = str.charAt(i);
+            if (c == ' ')
+            {
+                encodedString += '+';
+            } 
+            else if (isalnum(c))
+            {
+                encodedString += c;
+            } 
+            else 
+            {
+                code1 = (c & 0xf) + '0';
+                if ((c & 0xf) > 9){
+                    code1 = (c & 0xf) - 10 + 'A';
+                }
+                c = (c >> 4) & 0xf;
+                code0 = c + '0';
+                if (c > 9){
+                    code0 = c - 10 + 'A';
+                }
+                encodedString += '%';
+                encodedString += code0;
+                encodedString += code1;
+            }
+            yield();
+        }
+        return encodedString;
     }
 
 }

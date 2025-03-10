@@ -1,7 +1,8 @@
 #pragma once
 
 #define CAMERA_MODEL_ESP32S3_EYE
-#define BUTTON_PIN  0
+// FPGA trigger pin
+#define FPGA_TRIGGER_PIN 21
 
 #include "esp_camera.h"
 #include "camera_pins.h"

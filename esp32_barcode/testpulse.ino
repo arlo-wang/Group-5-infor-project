@@ -5,7 +5,8 @@
 volatile bool triggerReceived = false;
 
 // Interrupt Service Routine (ISR) for the FPGA trigger
-void IRAM_ATTR onFPGATrigger() {
+void IRAM_ATTR onFPGATrigger() 
+{
   triggerReceived = true;
 }
 
@@ -24,7 +25,7 @@ void setup() {
 void loop() {
   // Check if the trigger has been received
   if (triggerReceived) {
-    Serial.println("FPGA trigger received!");
+    // Serial.println("FPGA trigger received!");
     // Clear the flag
     triggerReceived = false;
   }
