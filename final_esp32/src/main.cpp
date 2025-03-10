@@ -7,8 +7,6 @@
 #include "../include/bluetooth.hpp"
 #include "../include/camera.hpp"
 
-// pins used in the project: 39, 16, 17
-// constexpr int LED_PIN = 2;
 
 // bluetooth task
 void bluetoothTask(void *pvParameters) {

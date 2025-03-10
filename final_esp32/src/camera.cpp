@@ -41,6 +41,7 @@ namespace camera
         }
         return encodedString;
     }
+
     // camera setup
     void localSetup() 
     {
@@ -59,20 +60,25 @@ namespace camera
     // camera loop
     void localLoop() 
     {
+        Serial.println("Camera loop");
         // if button is pressed
         if(digitalRead(BUTTON_PIN) == LOW)
         {
-            delay(20);
+            delay(100);
+            Serial.println("Button pressed");
             // if button is still pressed, set color to yellow
             if(digitalRead(BUTTON_PIN) == LOW)
             {
+                Serial.println("Button still pressed");
                 ws2812SetColor(3);
+                Serial.println("color set to yellow");
                 // wait for button to be released
                 while(digitalRead(BUTTON_PIN) == LOW);
-
+                Serial.println("Button released");
                 // get image from camera
                 camera_fb_t * fb = NULL;
                 fb = esp_camera_fb_get();
+                Serial.println("Image captured");
 
                 // if image capture failed, print error message
                 if(!fb) Serial.println("Camera capture failed");
@@ -84,7 +90,8 @@ namespace camera
                     char *input = (char *)fb->buf;
                     char output[base64_enc_len(3)];
                     String imageFile = "";
-
+                    
+                    Serial.println("Encoding image to base64");
                     // encode image to base64
                     for (int i=0; i<fb->len; i++) 
                     {
@@ -100,10 +107,17 @@ namespace camera
                     // add header to request
                     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
+                    // print the size of the image
+                    Serial.print("Image data size: ");
+                    Serial.println(imageFile.length());
+
                     // send image to server
                     int httpResponseCode = http.POST("image=" + imageFile + "&id=1");
+                    Serial.print("Camera HTTP Response code: ");
                     Serial.println(httpResponseCode);
+                    
                     http.end();
+                    Serial.println("Image sent to server");
                 }
 
                 esp_camera_fb_return(fb);
