@@ -77,6 +77,9 @@ void setup()
     bluetooth::localSetup();
     delay(500);
     gps::localSetup();
+    delay(500);
+    camera::localSetup();
+    delay(500);
 
     // buzzer task
     xTaskCreatePinnedToCore(
@@ -121,7 +124,7 @@ void setup()
         NULL,          // task handle
         1              // run on core 1
     );
-    
+
     // // other task
     // xTaskCreatePinnedToCore(
     //     otherTask,    // task function

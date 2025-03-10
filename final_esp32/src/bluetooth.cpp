@@ -112,10 +112,17 @@ namespace bluetooth {
             // if no device found, trigger alarm
             else 
             {
+                if (gps::gps.last_valid_fix == 0)
+                {
+                    return;
+                }
+
                 current_state = NO_DEVICE;
                 last_found_device_names = {};  // reset the device name
                 Serial.println("No matching device found.");
                 buzzer::triggerAlarm(buzzer::ALARM);
+
+
             }
             
             // Clear scan results to free memory

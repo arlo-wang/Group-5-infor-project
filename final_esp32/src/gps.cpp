@@ -125,7 +125,7 @@ namespace gps {
             checkGeofence(gps, geofence);
         }
         
-        // 更新上一次的位置有效状态
+        // update previous location valid status
         previous_location_valid = gps.location_valid;
         
         // only update GPS data if the specified time interval has passed
@@ -195,6 +195,7 @@ namespace gps {
             fence.alarm_triggered = true;
             DEBUGSerial.println("!!! GEOFENCE ALARM: Device has left the geofence area !!!");
         }
+        
         // Reset alarm if moved from outside to inside or if signal just recovered and inside
         else if ((!was_inside && gps.inside_geofence) || gps.inside_geofence) {
             // if device moved from outside to inside, or signal just recovered and inside, reset alarm
@@ -227,6 +228,9 @@ namespace gps {
 
     // Check if alarm has been triggered
     bool isGeofenceAlarmTriggered() {
+        if (gps.last_valid_fix == 0) {
+            return false;
+        }
         return geofence.alarm_triggered;
     }
 

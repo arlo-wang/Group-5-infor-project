@@ -50,8 +50,7 @@ namespace buzzer {
         // reset alarm if geofence alarm is not triggered
         else if ((current_state == ALARM && 
                 !gps::isGeofenceAlarmTriggered() && 
-                gps::hasValidLocation()) || 
-                bluetooth::isDeviceFound()) 
+                (gps::hasValidLocation() || bluetooth::isDeviceFound()))) 
         {
             DEBUGSerial.println("Geofence alarm reset - stopping buzzer");
             stopAlarm();
