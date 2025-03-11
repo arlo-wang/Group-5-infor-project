@@ -35,7 +35,9 @@ def updateCoords(request):
         scanner = Scanner.objects.get(_id=id)
         if str(radius) == "0":
             lat, lng, radius = scanner.location.split(",")
-        scanner.location = f"{lat+0.00001},{lng-0.00001},{random.choice([3,6,9,15,20,30])}"
+            scanner.location = f"{lat+0.0000001},{lng-0.0000001},{random.choice([3,6,9,15,20,30])}"
+        else:
+            scanner.location = f"{lat},{lng},{radius}"
         scanner.save()
         return Response("Successful", status=200)
     except Exception as e:
