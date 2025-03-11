@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from base.models import Cart, Scanner, Product
 from base.serializer import ScannerSerializer, CartSerializer
+import random
 
 @api_view(['POST'])
 def getCart(request):
@@ -32,7 +33,9 @@ def updateCoords(request):
         data = request.data
         id, lat, lng, radius = data['id'], data['lat'], data['lng'], data['radius']
         scanner = Scanner.objects.get(_id=id)
-        scanner.location = f"{lat},{lng},{radius}"
+        if str(radius) == "0":
+            lat, lng, radius = scanner.location.split(",")
+        scanner.location = f"{lat+0.00001},{lng-0.00001},{random.choice([3,6,9,15,20,30])}"
         scanner.save()
         return Response("Successful", status=200)
     except Exception as e:
