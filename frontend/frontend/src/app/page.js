@@ -6,7 +6,7 @@ import { GoogleMap, Circle, useLoadScript } from '@react-google-maps/api';
 const GeofenceMap = () => {
   const [geofences, setGeofences] = useState([])
 
-  useEffect(() => {
+  const fetchGeofences = () => {
     fetch(`http://3.8.78.228:8000/api/cart/location/`, {
       method: "GET",
       headers: {
@@ -48,6 +48,13 @@ const GeofenceMap = () => {
         }
       ]);
     })
+  }
+
+  useEffect(() => {
+    fetchGeofences();
+    console.log(geofences);
+    const intervalId = setInterval(fetchGeofences, 5000);
+    return () => clearInterval(intervalId);
   }, [])
   // Use useLoadScript hook
   const { isLoaded, loadError } = useLoadScript({
