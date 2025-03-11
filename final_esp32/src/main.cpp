@@ -118,7 +118,7 @@ void setup()
         "Camera Task", // task name
         10000,         // stack size
         NULL,          // task parameters
-        1,             // priority
+        2,             // priority
         NULL,          // task handle
         1              // run on core 1
     );
