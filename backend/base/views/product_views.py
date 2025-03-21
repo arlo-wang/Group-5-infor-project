@@ -32,9 +32,6 @@ def getProducts(request):
             lst.append(product)
     if len(lst):
         product = lst[0]
-    else:
-        items = list(Product.objects.all())
-        product = random.choice(items)
     change = False
     cart = Cart.objects.get(_id=id)
     cartList = cart.cartItems[:-1].split(',')
